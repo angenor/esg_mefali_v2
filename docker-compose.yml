@@ -1,0 +1,27 @@
+# ESG Mefali — Compose
+# SEUL service docker en MVP : PostgreSQL + pgvector.
+# Backend tourne dans .venv local, Frontend via pnpm dev.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: esg_mefali_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-esg_mefali}
+      POSTGRES_USER: ${POSTGRES_USER:-esg}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-esg} -d ${POSTGRES_DB:-esg_mefali}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
+    name: esg_mefali_pgdata

@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — F01 Foundations Health API
+  version: "0.1.0"
+  description: |
+    Endpoint de santé du backend FastAPI. Vérifie la connectivité PostgreSQL via `SELECT 1` (timeout 2 s).
+servers:
+  - url: http://localhost:8000
+    description: Dev local
+paths:
+  /health:
+    get:
+      summary: Liveness + DB health
+      operationId: getHealth
+      responses:
+        "200":
+          description: Backend opérationnel et base de données joignable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthOk"
+              example:
+                status: ok
+                db: ok
+        "503":
+          description: Backend opérationnel mais base de données injoignable ou en timeout.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDegraded"
+              example:
+                status: degraded
+                db: unreachable
+components:
+  schemas:
+    HealthOk:
+      type: object
+      required: [status, db]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        db:
+          type: string
+          enum: [ok]
+    HealthDegraded:
+      type: object
+      required: [status, db]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [degraded]
+        db:
+          type: string
+          enum: [unreachable]
