@@ -92,6 +92,13 @@ app.include_router(entreprise_router)
 app.include_router(chat_router)
 app.include_router(chat_events_router)
 
+# F12 — Profile projets: CRUD + duplicate + transition + documents
+from app.api.routes.projets import router as projets_router  # noqa: E402
+from app.api.routes.projets_documents import router as projets_documents_router  # noqa: E402
+
+app.include_router(projets_router)
+app.include_router(projets_documents_router)
+
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
 from app.admin.routes.pme import router as admin_pme_router  # noqa: E402
