@@ -160,6 +160,11 @@ from app.api.internal_skills import router as internal_skills_router  # noqa: E4
 
 app.include_router(internal_skills_router)
 
+# F23 — Scoring ESG multi-référentiels (PME).
+from app.scoring.router import router as scoring_router  # noqa: E402
+
+app.include_router(scoring_router)
+
 
 @app.get("/health")
 def health() -> Any:
