@@ -99,6 +99,11 @@ from app.api.routes.projets_documents import router as projets_documents_router 
 app.include_router(projets_router)
 app.include_router(projets_documents_router)
 
+# F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
+from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
+
+app.include_router(entreprise_documents_router)
+
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
 from app.admin.routes.pme import router as admin_pme_router  # noqa: E402
