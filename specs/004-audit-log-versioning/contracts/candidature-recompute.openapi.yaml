@@ -1,0 +1,121 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Candidature Recompute API (F04)
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /candidatures/{id}/recompute-from-snapshot:
+    post:
+      summary: Recompute a candidature score from its frozen snapshot.
+      operationId: recomputeFromSnapshot
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Recompute result. The endpoint always returns 200, even when drift is detected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecomputeResult' }
+        '404': { description: Candidature not found or not visible to the caller. }
+        '409': { description: Candidature has not been submitted (no snapshot to recompute). }
+  /referentiels/{logical_id}/publish:
+    post:
+      summary: Publish a new version of a referential (or any versioned entity).
+      operationId: publishNewVersion
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: logical_id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: If-Match
+          required: true
+          description: Integer version of the row at the time of read (optimistic lock).
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublishVersionRequest' }
+      responses:
+        '201':
+          description: New version created and previous version closed atomically.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VersionedEntityRef' }
+        '412':
+          description: Optimistic-lock conflict — `If-Match` value is stale.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VersionConflictError' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount:   { type: string, description: 'Decimal as string to avoid float drift.' }
+        currency: { type: string, description: 'ISO 4217 code.' }
+    RecomputeResult:
+      type: object
+      additionalProperties: false
+      required: [recomputed_score, snapshotted_score, drift_detected, request_id]
+      properties:
+        recomputed_score:
+          type: object
+          additionalProperties: false
+          required: [global, per_critere]
+          properties:
+            global:      { $ref: '#/components/schemas/Money' }
+            per_critere:
+              type: object
+              additionalProperties: { $ref: '#/components/schemas/Money' }
+        snapshotted_score:
+          type: object
+          additionalProperties: false
+          required: [global, per_critere]
+          properties:
+            global:      { $ref: '#/components/schemas/Money' }
+            per_critere:
+              type: object
+              additionalProperties: { $ref: '#/components/schemas/Money' }
+        drift_detected: { type: boolean }
+        drift_amount:   { $ref: '#/components/schemas/Money' }
+        request_id:     { type: string }
+    PublishVersionRequest:
+      type: object
+      additionalProperties: false
+      required: [payload]
+      properties:
+        payload:
+          type: object
+          description: Entity-specific payload validated by the dedicated Pydantic model.
+    VersionedEntityRef:
+      type: object
+      additionalProperties: false
+      required: [id, logical_id, version, valid_from]
+      properties:
+        id:         { type: string, format: uuid }
+        logical_id: { type: string, format: uuid }
+        version:    { type: integer }
+        valid_from: { type: string, format: date-time }
+        parent_id:  { type: string, format: uuid, nullable: true }
+    VersionConflictError:
+      type: object
+      additionalProperties: false
+      required: [error, current_version]
+      properties:
+        error:           { type: string, enum: [version_conflict] }
+        current_version: { type: integer }
+        request_id:      { type: string }

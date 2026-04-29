@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://esg-mefali.com/schemas/candidature-snapshot/v1.json",
+  "title": "CandidatureSnapshotV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "referentiel", "offre", "projet_state", "scores", "sources"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "referentiel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_id", "version", "valid_from"],
+      "properties": {
+        "logical_id": { "type": "string", "format": "uuid" },
+        "version":    { "type": "integer", "minimum": 1 },
+        "valid_from": { "type": "string", "format": "date-time" }
+      }
+    },
+    "offre": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "criteres"],
+      "properties": {
+        "id":       { "type": "string", "format": "uuid" },
+        "criteres": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["logical_id", "version"],
+            "properties": {
+              "logical_id": { "type": "string", "format": "uuid" },
+              "version":    { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "projet_state": { "type": "object" },
+    "scores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["global", "per_critere"],
+      "properties": {
+        "global": { "$ref": "#/$defs/Money" },
+        "per_critere": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/Money" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "verified"],
+        "properties": {
+          "source_id": { "type": "string", "format": "uuid" },
+          "verified":  { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "Money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount":   { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+      }
+    }
+  }
+}

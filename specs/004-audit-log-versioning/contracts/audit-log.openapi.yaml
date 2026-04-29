@@ -1,0 +1,129 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Audit Log API (F04)
+  version: 1.0.0
+  description: Append-only audit log read and export endpoints. PME callers see only their own tenant's rows (RLS); admins see all tenants.
+servers:
+  - url: /api/v1
+paths:
+  /audit-log:
+    get:
+      summary: List audit-log entries
+      operationId: listAuditLog
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: entity_type
+          schema: { type: string }
+        - in: query
+          name: entity_id
+          schema: { type: string, format: uuid }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: source_of_change
+          schema:
+            type: string
+            enum: [manual, llm, import, admin, system]
+        - in: query
+          name: account_id
+          description: Admin-only override; PME callers' rows are filtered by RLS regardless of this parameter.
+          schema: { type: string, format: uuid }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Paginated audit-log page (timestamp DESC, id DESC).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogPage'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /audit-log.csv:
+    get:
+      summary: Export audit log as CSV (RLS-scoped).
+      operationId: exportAuditLogCsv
+      security:
+        - bearerAuth: []
+      parameters:
+        - { in: query, name: from, schema: { type: string, format: date-time } }
+        - { in: query, name: to,   schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: CSV stream
+          content:
+            text/csv: { schema: { type: string } }
+  /audit-log.json:
+    get:
+      summary: Export audit log as JSON (RLS-scoped).
+      operationId: exportAuditLogJson
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: JSON array
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditLogEntry' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    AuditLogEntry:
+      type: object
+      additionalProperties: false
+      required: [id, timestamp, entity_type, entity_id, source_of_change, request_id]
+      properties:
+        id:               { type: integer, format: int64 }
+        user_id:          { type: string, format: uuid, nullable: true }
+        account_id:       { type: string, format: uuid, nullable: true }
+        timestamp:        { type: string, format: date-time }
+        entity_type:      { type: string }
+        entity_id:        { type: string, format: uuid }
+        field:            { type: string, nullable: true }
+        old_value:        { nullable: true }
+        new_value:        { nullable: true }
+        source_of_change:
+          type: string
+          enum: [manual, llm, import, admin, system]
+        request_id:       { type: string }
+        ip:               { type: string, nullable: true }
+        notes:            { type: string, nullable: true }
+    AuditLogPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, page_size, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/AuditLogEntry' }
+        page:       { type: integer }
+        page_size:  { type: integer }
+        total:      { type: integer }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:   { type: string }
+        detail:  { type: string, nullable: true }
+        request_id: { type: string, nullable: true }
