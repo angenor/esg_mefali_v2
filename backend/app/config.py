@@ -64,6 +64,9 @@ class Settings(BaseSettings):
     # --- Speech-to-text (utilisé en F22) ---
     REPLICATE_API_TOKEN: str = Field(..., min_length=1)
 
+    # --- F24 (rapport conformité PDF) ---
+    RAPPORT_STORAGE_DIR: str = "var/rapports"
+
     # --- F05 (data privacy & FX) ---
     EXCHANGERATE_API_KEY: str = ""
     PURGE_PSEUDONYM_PEPPER: str = ""

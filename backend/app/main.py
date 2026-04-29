@@ -165,6 +165,11 @@ from app.scoring.router import router as scoring_router  # noqa: E402
 
 app.include_router(scoring_router)
 
+# F24 — Rapport de conformité PDF (PME).
+from app.rapports.router import router as rapports_router  # noqa: E402
+
+app.include_router(rapports_router)
+
 
 @app.get("/health")
 def health() -> Any:
