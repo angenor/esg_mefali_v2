@@ -1,0 +1,50 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Public Sources API (F07)
+  version: 0.1.0
+  description: |
+    Lecture publique d'une source (read-only). Sans authentification.
+    Réponses pour `verified` ou `outdated` uniquement (404 sur `pending`).
+    Le serveur ajoute systématiquement le header X-Robots-Tag: noindex, nofollow.
+servers:
+  - url: /api
+
+paths:
+  /public/sources/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      summary: Lire une source publique (verified|outdated)
+      responses:
+        '200':
+          description: Source publique
+          headers:
+            X-Robots-Tag:
+              schema: { type: string, example: 'noindex, nofollow' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSource' }
+        '404':
+          description: Introuvable ou non public (pending, deleted)
+          headers:
+            X-Robots-Tag:
+              schema: { type: string, example: 'noindex, nofollow' }
+
+components:
+  schemas:
+    PublicSource:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, description: URL canonique avec deep-link }
+        title: { type: string }
+        publisher: { type: string }
+        version: { type: string, nullable: true }
+        date_publi: { type: string, format: date, nullable: true }
+        page: { type: integer, nullable: true }
+        section: { type: string, nullable: true }
+        verification_status: { type: string, enum: [verified, outdated] }
+        verified_at: { type: string, format: date-time, nullable: true }

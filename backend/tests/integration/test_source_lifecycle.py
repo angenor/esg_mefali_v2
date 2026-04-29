@@ -54,7 +54,7 @@ class TestSourceLifecycle:
             sid = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
-                url="https://gcf.example/criteria.pdf",
+                url=f"https://gcf.example/criteria.pdf?t={uuid.uuid4()}",
                 title="GCF Investment Criteria v3",
                 publisher="GCF",
                 version="v3.0",
@@ -87,7 +87,7 @@ class TestSourceLifecycle:
             sid = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
-                url="https://gcf.example/criteria.pdf",
+                url=f"https://gcf.example/doc.pdf?t={uuid.uuid4()}",
                 title="GCF Doc",
                 publisher="GCF",
             )
@@ -109,14 +109,14 @@ class TestSourceLifecycle:
             sid_pending = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
-                url="https://x.example/p",
+                url=f"https://x.example/p/{uuid.uuid4()}",
                 title="P",
                 publisher="GCF",
             )
             sid_verified = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
-                url="https://x.example/v",
+                url=f"https://x.example/v/{uuid.uuid4()}",
                 title="V",
                 publisher="GCF",
             )
@@ -158,7 +158,7 @@ class TestSourceLifecycle:
             sid = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
-                url="https://x.example/restrict",
+                url=f"https://x.example/restrict/{uuid.uuid4()}",
                 title="R",
                 publisher="GCF",
             )
