@@ -99,6 +99,11 @@ from app.api.routes.projets_documents import router as projets_documents_router 
 app.include_router(projets_router)
 app.include_router(projets_documents_router)
 
+# F25 — Matching projet <-> offre (PME).
+from app.matching.router import router as matching_router  # noqa: E402
+
+app.include_router(matching_router)
+
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
