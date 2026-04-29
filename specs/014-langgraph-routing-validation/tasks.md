@@ -6,6 +6,14 @@
 Approche : TDD strict (RED → GREEN → REFACTOR). Couverture ≥ 80 % sur `backend/app/orchestrator/`. Lint ruff vert.
 Marqueur `[P]` = parallélisable (fichiers indépendants, pas de dépendance sur tâche en cours).
 
+> **[DEFERRED — implémentation Phase B]**
+>
+> La spec / plan / tasks (Phase A) ont été générés et commités sur la branche `014-langgraph-routing-validation` (commit spec). L'implémentation effective des tâches T001–T115 (Phase B) est **différée à une session ultérieure** : le volume (49 tâches, ≥ 8 nouveaux modules + migration + ORM + tests TDD + intégration chat API + endpoint admin + vérif non-régression F01–F13) dépasse le budget contextuel d'une session unique avec gate fact-forcing systématique sur chaque écriture.
+>
+> Tous les artefacts (spec.md, plan.md, research.md, data-model.md, contracts/sse-events-f14.md, quickstart.md, tasks.md) sont **prêts pour `/speckit-implement`** dans une session dédiée. Le contrat est figé : aucune ré-clarification nécessaire.
+>
+> Préfixer toutes les tâches de Phase B suivantes par `[DEFERRED]`.
+
 ---
 
 ## Phase 1 — Setup
