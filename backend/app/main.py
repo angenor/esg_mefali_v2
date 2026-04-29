@@ -27,6 +27,7 @@ from app.admin.stats import router as admin_stats_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
 from app.api.routes.candidatures import router as candidatures_router
+from app.api.routes.entreprise import router as entreprise_router
 from app.api.routes.llm_tools import router as llm_tools_router
 from app.api.routes.privacy import router as privacy_router
 from app.api.routes.sources import router as sources_router
@@ -84,6 +85,8 @@ app.include_router(audit_log_router)
 app.include_router(versioning_router)
 app.include_router(candidatures_router)
 app.include_router(privacy_router)
+app.include_router(entreprise_router)
+app.include_router(entreprise_router)
 
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
