@@ -1,0 +1,339 @@
+openapi: 3.1.0
+info:
+  title: F10 Admin Support & Metrics API
+  version: 0.1.0
+  description: Endpoints admin pour support PME et métriques agrégées (feature 010).
+
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: string
+          description: Decimal as string (Money typé Module 0)
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+    AdminPmeListItem:
+      type: object
+      required: [account_id, email, raison_sociale, created_at]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        raison_sociale:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+    AdminPmeDetail:
+      type: object
+      required: [account_id, entreprise, projets_count, candidatures_count, scores_count, attestations_count, messages_llm_count]
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        entreprise:
+          type: object
+        projets_count:
+          type: integer
+        candidatures_count:
+          type: integer
+        scores_count:
+          type: integer
+        attestations_count:
+          type: integer
+        messages_llm_count:
+          type: integer
+    DashboardStats:
+      type: object
+      required: [sources, catalogue, pme, activite, llm, generated_at, cached]
+      properties:
+        sources:
+          type: object
+          properties:
+            total: {type: integer}
+            pending: {type: integer}
+            verified: {type: integer}
+            outdated: {type: integer}
+            top_publishers:
+              type: array
+              items:
+                type: object
+                properties:
+                  publisher: {type: string}
+                  count: {type: integer}
+        catalogue:
+          type: object
+          properties:
+            fonds: {type: integer}
+            intermediaires: {type: integer}
+            offres: {type: integer}
+            referentiels_published: {type: integer}
+            referentiels_draft: {type: integer}
+        pme:
+          type: object
+          properties:
+            actifs_30j: {type: integer}
+            nouveaux_ce_mois: {type: integer}
+        activite:
+          type: object
+          properties:
+            candidatures_par_statut:
+              type: object
+              additionalProperties: {type: integer}
+            attestations_emises: {type: integer}
+            attestations_revoquees: {type: integer}
+        llm:
+          type: object
+          properties:
+            messages_7j: {type: integer}
+            taux_ok: {type: number}
+            taux_retry: {type: number}
+            taux_fallback: {type: number}
+        generated_at:
+          type: string
+          format: date-time
+        cached:
+          type: boolean
+    LlmUsageDay:
+      type: object
+      required: [day, prompt_tokens, completion_tokens, calls, estimated_cost]
+      properties:
+        day:
+          type: string
+          format: date
+        prompt_tokens:
+          type: integer
+        completion_tokens:
+          type: integer
+        calls:
+          type: integer
+        estimated_cost:
+          $ref: '#/components/schemas/Money'
+    RevokeAttestationRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 500
+    RegenerateAttestationRequest:
+      type: object
+      properties:
+        force_consent_pending:
+          type: boolean
+          default: false
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: {type: string}
+        message: {type: string}
+
+paths:
+  /admin/pme:
+    get:
+      summary: Liste paginée des comptes PME (admin)
+      parameters:
+        - in: query
+          name: q
+          schema: {type: string}
+          description: Recherche email ou raison sociale (ILIKE + pg_trgm)
+        - in: query
+          name: cursor
+          schema: {type: string}
+        - in: query
+          name: limit
+          schema: {type: integer, default: 50, maximum: 100}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdminPmeListItem'
+                  next_cursor: {type: string, nullable: true}
+        '403': {description: Forbidden}
+
+  /admin/pme/{account_id}:
+    get:
+      summary: Fiche admin lecture seule d'un compte PME
+      description: |
+        Insère automatiquement une ligne `audit_log` (`entity_type='admin_view'`, section paramétrable via header).
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: query
+          name: section
+          required: false
+          schema:
+            type: string
+            enum: [dashboard, projets, candidatures, scores, attestations, llm, audit]
+            default: dashboard
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPmeDetail'
+        '404': {description: Compte introuvable}
+
+  /admin/users/{user_id}/reset-password:
+    post:
+      summary: Déclenche un email de reset password pour un user PME
+      description: Génère un token 1h, envoie email via Resend, audit côté admin + côté PME. Pas de retour du token.
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '202':
+          description: Email queued (BackgroundTasks)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  email_delivery_id: {type: string, format: uuid}
+                  status: {type: string, enum: [queued]}
+        '404': {description: User introuvable}
+
+  /admin/users/{user_id}/unlock:
+    post:
+      summary: Débloque un compte verrouillé (no-op si lock pas encore en place)
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200': {description: OK}
+
+  /admin/attestations/{id}/revoke:
+    post:
+      summary: Révoque une attestation publique
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeAttestationRequest'
+      responses:
+        '200':
+          description: Attestation révoquée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked_at: {type: string, format: date-time}
+                  revoked_by: {type: string, format: uuid}
+        '409':
+          description: Déjà révoquée
+        '422':
+          description: Motif < 10 chars
+
+  /admin/attestations/{id}/regenerate:
+    post:
+      summary: Demande la régénération d'une attestation (consentement PME requis)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegenerateAttestationRequest'
+      responses:
+        '202':
+          description: Mise en attente de consentement PME
+        '200':
+          description: Régénérée immédiatement (consentement déjà donné)
+
+  /admin/dashboard/stats:
+    get:
+      summary: Agrégats temps réel du dashboard admin (cache 60s)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+
+  /admin/dashboard/llm-usage:
+    get:
+      summary: Usage LLM journalier sur une plage temporelle
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: {type: string, format: date}
+        - in: query
+          name: to
+          required: true
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LlmUsageDay'
+
+  /admin/email-deliveries:
+    get:
+      summary: Journal des livraisons email (diagnostic)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [queued, sent, failed, bounced]
+        - in: query
+          name: limit
+          schema: {type: integer, default: 100}
+      responses:
+        '200': {description: OK}
