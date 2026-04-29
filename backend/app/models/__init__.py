@@ -16,6 +16,8 @@ class Base(DeclarativeBase):
 
 from app.models.account import Account  # noqa: E402,F401
 from app.models.account_user import AccountUser  # noqa: E402,F401
+from app.models.action_plan import ActionPlan  # noqa: E402,F401
+from app.models.action_step import ActionStep  # noqa: E402,F401
 from app.models.attestation import Attestation  # noqa: E402,F401
 from app.models.carbon_footprint import CarbonFootprint  # noqa: E402,F401
 from app.models.credit_data import CreditData  # noqa: E402,F401
@@ -29,6 +31,8 @@ from app.models.unsourced_claim_log import UnsourcedClaimLog  # noqa: E402,F401
 __all__ = [
     "Account",
     "AccountUser",
+    "ActionPlan",
+    "ActionStep",
     "Attestation",
     "Base",
     "CarbonFootprint",
