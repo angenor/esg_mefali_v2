@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info: {title: F09 — Referentiels, version: 1.0.0}
+servers: [{url: /admin}]
+paths:
+  /referentiels:
+    get: {summary: List, responses: {'200': {description: OK}}}
+    post: {summary: Create draft, responses: {'201': {description: Created}}}
+  /referentiels/{id}:
+    get: {summary: Get header, responses: {'200': {description: OK}}}
+    patch:
+      parameters: [{name: If-Match, in: header, required: true, schema: {type: string}}]
+      responses: {'200': {description: OK}, '412': {description: ETag mismatch}}
+  /referentiels/{id}/full:
+    get:
+      summary: Get full referentiel (header + indicateurs joined + sources + active version)
+      responses: {'200': {description: OK with full payload}}
+  /referentiels/{id}/publish:
+    post:
+      summary: Publish (runs coherence validator US7)
+      responses:
+        '200': {description: Published}
+        '409':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: {type: string}
+                        actual: {}
+                        expected: {}
+  /referentiels/{id}/indicateurs:
+    post: {summary: Attach indicateur with poids/seuils/source_id}
+    delete: {summary: Detach indicateur}
+  /referentiels/{id}/archive:
+    post: {summary: Archive}

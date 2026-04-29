@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info: {title: F09 — Documents Requis, version: 1.0.0}
+servers: [{url: /admin}]
+paths:
+  /documents-requis:
+    get:
+      parameters:
+        - {name: owner_type, in: query, schema: {type: string, enum: [fonds,intermediaire]}}
+        - {name: owner_id, in: query, schema: {type: string, format: uuid}}
+        - {name: type, in: query, schema: {type: string, enum: [juridique,financier,technique,impact,autre]}}
+      responses: {'200': {description: OK}}
+    post: {responses: {'201': {description: Created}}}
+  /documents-requis/{id}:
+    get: {}
+    patch: {parameters: [{name: If-Match, in: header, required: true, schema: {type: string}}]}
+  /documents-requis/{id}/publish: {post: {summary: Publish (requires source verified)}}
+  /documents-requis/{id}/archive: {post: {}}

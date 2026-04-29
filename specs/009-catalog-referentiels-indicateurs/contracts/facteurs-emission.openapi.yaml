@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info: {title: F09 — Facteurs d'émission, version: 1.0.0}
+servers: [{url: /admin}]
+paths:
+  /facteurs-emission:
+    get:
+      parameters:
+        - {name: code, in: query, schema: {type: string}}
+        - {name: pays_iso2, in: query, schema: {type: string, minLength: 2, maxLength: 2}}
+        - {name: scope, in: query, schema: {type: string, enum: ['1','2','3']}}
+        - {name: categorie, in: query, schema: {type: string, enum: [energie,transport,dechets,achats,autre]}}
+        - {name: at, in: query, schema: {type: string, format: date}}
+      responses: {'200': {description: OK}}
+    post:
+      responses:
+        '201': {description: Created (trigger closes prior valid_to)}
+        '409': {description: Overlapping validity window}
+  /facteurs-emission/{id}:
+    get: {}
+    patch: {parameters: [{name: If-Match, in: header, required: true, schema: {type: string}}]}
+  /facteurs-emission/{id}/publish: {post: {summary: Publish (requires verified source)}}
+  /facteurs-emission/lookup:
+    get:
+      summary: Helper backend get_facteur(code, pays?, at?)
+      parameters:
+        - {name: code, in: query, required: true, schema: {type: string}}
+        - {name: pays_iso2, in: query, schema: {type: string}}
+        - {name: at, in: query, schema: {type: string, format: date}}
+      responses:
+        '200': {description: Found}
+        '404': {description: Not found}

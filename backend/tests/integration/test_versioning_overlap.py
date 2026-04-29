@@ -41,24 +41,38 @@ def test_overlap_rejected_per_table(db_engine, table: str) -> None:
             "to2": later,
         }
         if table == "indicateur":
+            common["code"] = f"OVL_I_{uuid4().hex[:6].upper()}"
             insert_a = (
-                "INSERT INTO indicateur (id, name, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), 'I', CAST(:lid AS UUID), :from1, :to1)"
+                "INSERT INTO indicateur (id, code, name, pillar, logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), :code, 'I', 'E', CAST(:lid AS UUID), :from1, :to1)"
             )
+            common["code2"] = common["code"] + "_2"
             insert_b = (
-                "INSERT INTO indicateur (id, name, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), 'I2', CAST(:lid AS UUID), :from2, :to2)"
+                "INSERT INTO indicateur (id, code, name, pillar, logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), :code2, 'I2', 'E', CAST(:lid AS UUID), :from2, :to2)"
             )
         elif table == "facteur_emission":
+            # F09 facteur_emission requires source_id NOT NULL + valid_from_date.
+            src_id = db.execute(
+                text("SELECT id FROM source LIMIT 1")
+            ).scalar()
+            if src_id is None:
+                pytest.skip("no source available for facteur_emission overlap test")
+            common["sid"] = str(src_id)
+            common["code_f"] = f"OVL_F_{uuid4().hex[:6].upper()}"
             insert_a = (
                 "INSERT INTO facteur_emission "
-                "(id, name, valeur, unite, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), 'F', 1, 'kgCO2', CAST(:lid AS UUID), :from1, :to1)"
+                "(id, code, name, valeur, unite, scope, source_id, valid_from_date, "
+                "logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), :code_f, 'F', 1, 'kgCO2', '1', "
+                "CAST(:sid AS UUID), '2024-01-01', CAST(:lid AS UUID), :from1, :to1)"
             )
             insert_b = (
                 "INSERT INTO facteur_emission "
-                "(id, name, valeur, unite, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), 'F', 2, 'kgCO2', CAST(:lid AS UUID), :from2, :to2)"
+                "(id, code, name, valeur, unite, scope, source_id, valid_from_date, "
+                "logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), :code_f, 'F', 2, 'kgCO2', '1', "
+                "CAST(:sid AS UUID), '2024-02-01', CAST(:lid AS UUID), :from2, :to2)"
             )
         elif table == "template":
             # template requires offre_id NOT NULL — fetch or create one.
@@ -92,21 +106,23 @@ def test_overlap_rejected_per_table(db_engine, table: str) -> None:
                 "VALUES (gen_random_uuid(), :oid, 'T2', CAST(:lid AS UUID), :from2, :to2)"
             )
         elif table == "critere":
-            # critere requires either offre_id or referentiel_id (XOR).
-            ref_id = db.execute(
-                text(
-                    "INSERT INTO referentiel (id, name, version) "
-                    "VALUES (gen_random_uuid(), 'R', 'v1') RETURNING id"
-                )
-            ).scalar_one()
-            common["rid_ref"] = ref_id
+            # F09 critere requires owner_type/owner_id + label + source_id + expression_json.
+            src_id = db.execute(text("SELECT id FROM source LIMIT 1")).scalar()
+            if src_id is None:
+                pytest.skip("no source available for critere overlap test")
+            common["sid"] = str(src_id)
+            common["oid"] = str(uuid4())
             insert_a = (
-                "INSERT INTO critere (id, referentiel_id, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), :rid_ref, CAST(:lid AS UUID), :from1, :to1)"
+                "INSERT INTO critere (id, owner_type, owner_id, expression_json, label, "
+                "severity, source_id, logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), 'fonds', CAST(:oid AS UUID), '{\"const\": true}'::jsonb, "
+                "'L', 'warning', CAST(:sid AS UUID), CAST(:lid AS UUID), :from1, :to1)"
             )
             insert_b = (
-                "INSERT INTO critere (id, referentiel_id, logical_id, valid_from, valid_to) "
-                "VALUES (gen_random_uuid(), :rid_ref, CAST(:lid AS UUID), :from2, :to2)"
+                "INSERT INTO critere (id, owner_type, owner_id, expression_json, label, "
+                "severity, source_id, logical_id, valid_from, valid_to) "
+                "VALUES (gen_random_uuid(), 'fonds', CAST(:oid AS UUID), '{\"const\": true}'::jsonb, "
+                "'L2', 'warning', CAST(:sid AS UUID), CAST(:lid AS UUID), :from2, :to2)"
             )
         else:
             pytest.skip(f"no fixture for table {table}")

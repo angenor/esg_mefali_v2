@@ -1,0 +1,67 @@
+openapi: 3.1.0
+info: {title: F09 — Critères, version: 1.0.0}
+servers: [{url: /admin}]
+paths:
+  /criteres:
+    get:
+      summary: List critères, filterable by owner
+      parameters:
+        - {name: owner_type, in: query, schema: {type: string, enum: [fonds,intermediaire,offre,referentiel]}}
+        - {name: owner_id, in: query, schema: {type: string, format: uuid}}
+        - {name: severity, in: query, schema: {type: string, enum: [blocking,warning,info]}}
+      responses: {'200': {description: Sorted by severity desc}}
+    post: {summary: Create draft (parser validates DSL), responses: {'201': {description: Created}, '400': {description: Invalid DSL}}}
+  /criteres/{id}:
+    get: {responses: {'200': {description: OK}}}
+    patch:
+      parameters: [{name: If-Match, in: header, required: true, schema: {type: string}}]
+      responses: {'200': {description: OK}}
+  /criteres/{id}/publish:
+    post: {summary: Publish (requires verified source + DSL valid + referenced indicateurs published)}
+  /criteres/{id}/evaluate:
+    post:
+      summary: Evaluate critère against a context (testing helper)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context: {type: object, additionalProperties: true}
+      responses:
+        '200':
+          description: Tri-state result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result: {type: string, enum: [true, false, undecidable]}
+components:
+  schemas:
+    DslExpression:
+      description: Strict whitelist parser (depth <= 6, payload <= 8KB)
+      oneOf:
+        - type: object
+          required: [op, left, right]
+          properties:
+            op: {type: string, enum: ['==','!=','>=','<=','>','<','in','not_in','and','or']}
+            left: {$ref: '#/components/schemas/DslLeafOrExpr'}
+            right: {$ref: '#/components/schemas/DslLeafOrExpr'}
+        - type: object
+          required: [op, expr]
+          properties:
+            op: {type: string, enum: [not]}
+            expr: {$ref: '#/components/schemas/DslLeafOrExpr'}
+    DslLeafOrExpr:
+      oneOf:
+        - {$ref: '#/components/schemas/DslExpression'}
+        - type: object
+          properties:
+            indicateur: {type: string}
+        - type: object
+          properties:
+            context: {type: string}
+        - type: object
+          properties:
+            literal: {}

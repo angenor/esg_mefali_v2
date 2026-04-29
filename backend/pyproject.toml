@@ -32,6 +32,7 @@ omit = [
     "app/scripts/audit_routes.py",
     "app/scripts/audit_logs.py",
     "app/scripts/audit_rls.py",
+    "app/scripts/seed_f09_minimal.py",
 ]
 
 [tool.coverage.report]
