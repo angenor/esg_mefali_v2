@@ -18,6 +18,7 @@ from app.models.account import Account  # noqa: E402,F401
 from app.models.account_user import AccountUser  # noqa: E402,F401
 from app.models.password_reset_token import PasswordResetToken  # noqa: E402,F401
 from app.models.refresh_token import RefreshToken  # noqa: E402,F401
+from app.models.skill import Skill, SkillSource  # noqa: E402,F401
 from app.models.source import Source  # noqa: E402,F401
 from app.models.unsourced_claim_log import UnsourcedClaimLog  # noqa: E402,F401
 
@@ -27,6 +28,8 @@ __all__ = [
     "Base",
     "PasswordResetToken",
     "RefreshToken",
+    "Skill",
+    "SkillSource",
     "Source",
     "UnsourcedClaimLog",
 ]
