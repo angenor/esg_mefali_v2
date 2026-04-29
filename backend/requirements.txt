@@ -31,6 +31,13 @@ langchain>=0.3.7
 # en F18 si besoin d'un wrapper officiel.
 # voyageai>=0.3.1,<0.4
 
+# Auth (F02)
+passlib[bcrypt]>=1.7.4,<2
+python-jose[cryptography]>=3.3.0,<4
+slowapi>=0.1.9,<0.2
+email-validator>=2.2,<3
+aiosmtplib>=3.0,<4
+
 # === Dev ===
 pytest>=8.3,<9
 pytest-asyncio>=0.24

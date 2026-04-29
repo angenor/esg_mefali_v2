@@ -25,18 +25,63 @@ FX_PEG_XOF_EUR: Decimal = Decimal("655.957")
 DEFAULT_CURRENCY: str = "XOF"
 
 
-def _build_engine():
+def _build_engine(url: str | None = None):
     settings = get_settings()
     return create_engine(
-        settings.database_url,
+        url or settings.database_url,
         pool_pre_ping=True,
         future=True,
     )
 
 
+def _build_app_engine():
+    """Engine pour l'API : utilise le rôle ``app_user`` (RLS appliquée).
+
+    Si ``APP_USER_PASSWORD`` n'est pas défini, retombe sur l'engine principal
+    (utile en dev avant que les rôles aient été créés ou pour les tests).
+    """
+    settings = get_settings()
+    pwd = getattr(settings, "APP_USER_PASSWORD", "")
+    if not pwd:
+        return _build_engine()
+    url = (
+        f"postgresql+psycopg://app_user:{pwd}"
+        f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    )
+    return _build_engine(url)
+
+
+def _build_migrator_engine():
+    """Engine pour Alembic : utilise le rôle ``migrator`` (BYPASS RLS)."""
+    settings = get_settings()
+    pwd = getattr(settings, "MIGRATOR_PASSWORD", "")
+    if not pwd:
+        return _build_engine()
+    url = (
+        f"postgresql+psycopg://migrator:{pwd}"
+        f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    )
+    return _build_engine(url)
+
+
 # Engine paresseux : créé à l'import si la config est valide.
+# `engine` reste l'alias historique (rôle propriétaire de la base) ; `engine_app`
+# est l'engine `app_user` réellement utilisé par l'API.
 engine = _build_engine()
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+engine_app = _build_app_engine()
+SessionLocal = sessionmaker(
+    bind=engine_app, autoflush=False, autocommit=False, future=True
+)
+
+_engine_migrator = None
+
+
+def get_engine_migrator():
+    """Retourne l'engine ``migrator`` (BYPASS RLS), créé à la demande."""
+    global _engine_migrator
+    if _engine_migrator is None:
+        _engine_migrator = _build_migrator_engine()
+    return _engine_migrator
 
 
 def get_db() -> Generator[Session, None, None]:

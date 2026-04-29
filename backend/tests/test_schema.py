@@ -127,8 +127,9 @@ def test_metier_tables_account_id_not_null(db_engine, table):
             {"t": table},
         ).fetchone()
     assert row is not None, f"{table}.account_id absent"
-    if table == "audit_log":
+    if table in ("audit_log", "account_user"):
         # audit_log accepte NULL pour événements système (cf. data-model.md).
+        # account_user accepte NULL pour les admins (F02 — cf. data-model.md).
         assert row[0] in ("YES", "NO")
     else:
         assert row[0] == "NO", f"{table}.account_id devrait être NOT NULL"

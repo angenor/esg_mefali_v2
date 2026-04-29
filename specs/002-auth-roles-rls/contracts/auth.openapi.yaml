@@ -1,0 +1,308 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Auth API (F02)
+  version: 0.1.0
+  description: |
+    Endpoints d'authentification et de gestion de session.
+    Tous les endpoints retournent du JSON UTF-8.
+    Les jetons d'accès et refresh circulent via cookies httpOnly + Secure + SameSite=Strict.
+    Les opérations modifiantes exigent l'en-tête X-CSRF-Token (double-submit).
+servers:
+  - url: http://localhost:8000
+    description: Dev local
+  - url: https://api.mefali.example
+    description: Production
+
+paths:
+  /auth/register:
+    post:
+      operationId: authRegister
+      summary: Inscription d'un nouveau compte PME
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterIn' }
+      responses:
+        '201':
+          description: Compte créé. Cookies de session positionnés.
+          headers:
+            Set-Cookie:
+              description: mefali_at, mefali_rt, mefali_csrf
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeOut' }
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Validation échouée (mot de passe faible, email invalide)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/login:
+    post:
+      operationId: authLogin
+      summary: Connexion email + mot de passe
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginIn' }
+      responses:
+        '200':
+          description: Connexion réussie. Cookies positionnés.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeOut' }
+        '401':
+          description: Identifiants invalides (réponse identique pour email inconnu et mot de passe erroné)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/refresh:
+    post:
+      operationId: authRefresh
+      summary: Rotation du jeton d'accès
+      tags: [auth]
+      description: |
+        Le refresh token circule via cookie httpOnly `mefali_rt`. Aucun corps n'est requis.
+        En cas de succès, un nouveau access token et un nouveau refresh token remplacent les cookies.
+        Si le refresh token présenté a déjà été utilisé, toute la chaîne est révoquée et 401 est retourné.
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Nouveau jeton émis
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeOut' }
+        '401':
+          description: Refresh invalide / expiré / réutilisé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/logout:
+    post:
+      operationId: authLogout
+      summary: Déconnexion (révoque le refresh courant)
+      tags: [auth]
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Cookies effacés, refresh révoqué }
+
+  /auth/forgot-password:
+    post:
+      operationId: authForgotPassword
+      summary: Demande de réinitialisation de mot de passe
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ForgotIn' }
+      responses:
+        '202':
+          description: Demande prise en compte. La réponse est identique que l'email existe ou non.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NeutralAck' }
+        '429':
+          description: Trop de tentatives
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/reset-password:
+    post:
+      operationId: authResetPassword
+      summary: Consommation du jeton de réinitialisation et nouveau mot de passe
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ResetIn' }
+      responses:
+        '204': { description: Mot de passe mis à jour ; tous les refresh tokens révoqués }
+        '400':
+          description: Token invalide / expiré / déjà consommé
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Nouveau mot de passe non conforme à la politique
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  /me:
+    get:
+      operationId: getMe
+      summary: Profil de l'utilisateur courant
+      tags: [users]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Profil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MeOut' }
+        '401': { description: Non authentifié }
+
+  /admin/_rls_check:
+    get:
+      operationId: rlsCheck
+      summary: Endpoint de diagnostic RLS (admin uniquement)
+      tags: [admin]
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Rapport démontrant qu'une requête sans contexte d'account renvoie 0 ligne
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tables_checked, all_rls_enforced]
+                properties:
+                  tables_checked:
+                    type: array
+                    items: { type: string }
+                  all_rls_enforced: { type: boolean }
+                  details:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        table: { type: string }
+                        rows_without_context: { type: integer, minimum: 0 }
+                        rls_enabled: { type: boolean }
+                        rls_forced: { type: boolean }
+        '403': { description: Non admin }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: mefali_at
+
+  schemas:
+    RegisterIn:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          description: ≥ 12 caractères avec au moins 1 maj, 1 min, 1 chiffre.
+
+    LoginIn:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+
+    ForgotIn:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+
+    ResetIn:
+      type: object
+      required: [token, new_password]
+      properties:
+        token: { type: string, minLength: 32, maxLength: 128 }
+        new_password:
+          type: string
+          minLength: 12
+          maxLength: 128
+
+    MeOut:
+      type: object
+      required: [user_id, role, email, created_at]
+      properties:
+        user_id: { type: string, format: uuid }
+        account_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: NULL pour les Admins.
+        role:
+          type: string
+          enum: [pme, admin]
+        email: { type: string, format: email }
+        created_at: { type: string, format: date-time }
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    NeutralAck:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [accepted]
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+
+    ValidationError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, fields]
+          properties:
+            code: { type: string, enum: [validation_error] }
+            message: { type: string }
+            fields:
+              type: object
+              additionalProperties:
+                type: array
+                items: { type: string }
