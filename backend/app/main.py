@@ -21,11 +21,15 @@ from sqlalchemy.exc import SQLAlchemyError
 from app import db as db_module
 from app.admin.router import router as admin_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
+from app.api.routes.audit_log import router as audit_log_router
+from app.api.routes.candidatures import router as candidatures_router
 from app.api.routes.llm_tools import router as llm_tools_router
 from app.api.routes.sources import router as sources_router
+from app.api.routes.versioning import router as versioning_router
 from app.auth.router import router as auth_router
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
+from app.middleware.request_id import RequestIdMiddleware
 from app.users.router import router as users_router
 
 logger = logging.getLogger(__name__)
@@ -51,6 +55,8 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):  # noqa:
 
 # Auth session middleware
 app.add_middleware(AuthSessionMiddleware)
+# Request-ID middleware (F04 / FR-018) — runs before AuthSession.
+app.add_middleware(RequestIdMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,6 +73,9 @@ app.include_router(admin_router)
 app.include_router(sources_router)
 app.include_router(llm_tools_router)
 app.include_router(admin_unsourced_router)
+app.include_router(audit_log_router)
+app.include_router(versioning_router)
+app.include_router(candidatures_router)
 
 
 @app.get("/health")
