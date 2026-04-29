@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Admin Sources API (F07)
+  version: 0.1.0
+  description: |
+    Endpoints back-office pour la gestion des sources du catalogue.
+    Auth : rôle Admin requis (F02). RLS Postgres actif. Audit F04.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: admin-sources
+  - name: admin-unsourced-claims
+
+paths:
+  /admin/sources:
+    get:
+      tags: [admin-sources]
+      summary: Lister les sources (paginé, filtré, recherche full-text)
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Recherche full-text (titre + publisher + notes), tolérante aux accents
+        - in: query
+          name: status
+          style: form
+          explode: true
+          schema:
+            type: array
+            items: { type: string, enum: [pending, verified, outdated] }
+        - in: query
+          name: publisher
+          schema: { type: string }
+        - in: query
+          name: captured_by_me
+          schema: { type: boolean }
+        - in: query
+          name: date_from
+          schema: { type: string, format: date }
+        - in: query
+          name: date_to
+          schema: { type: string, format: date }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, enum: [25, 50, 100], default: 25 }
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [title, publisher, date_capture, verification_status, -title, -publisher, -date_capture, -verification_status]
+            default: -date_capture
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [admin-sources]
+      summary: Créer une nouvelle source (status = pending)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceCreate' }
+      responses:
+        '201':
+          description: Source créée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceCreated' }
+        '409':
+          description: Doublon détecté (canonical_url + page)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DuplicateConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /admin/sources/{id}:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    get:
+      tags: [admin-sources]
+      summary: Lire une source
+      responses:
+        '200':
+          description: Source
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceRead' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [admin-sources]
+      summary: Mettre à jour une source (modifie sa version si champ critique)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SourceUpdate' }
+      responses:
+        '200':
+          description: Source mise à jour (version_bumped indique si bump F04)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceUpdated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Conflit ETag ou doublon canonical_url
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [admin-sources]
+      summary: Soft-delete (uniquement si non référencée)
+      responses:
+        '204': { description: Supprimée }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Source référencée par au moins un objet, suppression refusée
+
+  /admin/sources/{id}/verify:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    post:
+      tags: [admin-sources]
+      summary: Valider une source (verified_by != captured_by, vérification serveur stricte)
+      responses:
+        '200':
+          description: Verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceRead' }
+        '409':
+          description: SAME_USER_NOT_ALLOWED — l'utilisateur courant a créé la source
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/sources/{id}/mark-outdated:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    post:
+      tags: [admin-sources]
+      summary: Marquer outdated (badge UI sur dépendants, pas de cascade)
+      responses:
+        '200':
+          description: Outdated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SourceRead' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/sources/{id}/impact:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+    get:
+      tags: [admin-sources]
+      summary: Compteurs agrégés des objets dépendants (< 500ms)
+      responses:
+        '200':
+          description: Impact
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImpactResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /admin/sources/{id}/impact/{category}:
+    parameters:
+      - $ref: '#/components/parameters/SourceId'
+      - in: path
+        name: category
+        required: true
+        schema:
+          type: string
+          enum: [indicateurs, criteres, formules, facteurs_emission, documents_requis, referentiels, skills, candidatures]
+      - in: query
+        name: page
+        schema: { type: integer, minimum: 1, default: 1 }
+      - in: query
+        name: page_size
+        schema: { type: integer, default: 25 }
+    get:
+      tags: [admin-sources]
+      summary: Liste paginée d'une catégorie d'impact (lazy expansion)
+      responses:
+        '200':
+          description: Liste
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImpactCategoryList' }
+
+  /admin/unsourced-claims:
+    get:
+      tags: [admin-unsourced-claims]
+      summary: Claims non sourcés détectés par le LLM (F03 flag_unsourced)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 25 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [-occurrences, -last_seen], default: -occurrences }
+      responses:
+        '200':
+          description: Liste agrégée par claim
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UnsourcedClaimsResponse' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    SourceId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    Unauthorized:
+      description: Non authentifié
+    Forbidden:
+      description: Rôle insuffisant
+    NotFound:
+      description: Introuvable
+    ValidationError:
+      description: Payload invalide
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ValidationError' }
+
+  schemas:
+    SourceCreate:
+      type: object
+      required: [url, title, publisher]
+      properties:
+        url: { type: string, format: uri }
+        title: { type: string, minLength: 1, maxLength: 500 }
+        publisher: { type: string, minLength: 1, maxLength: 200 }
+        version: { type: string, nullable: true }
+        date_publi: { type: string, format: date, nullable: true }
+        page: { type: integer, nullable: true, minimum: 1 }
+        section: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+
+    SourceUpdate:
+      type: object
+      properties:
+        url: { type: string, format: uri }
+        title: { type: string }
+        publisher: { type: string }
+        version: { type: string, nullable: true }
+        date_publi: { type: string, format: date, nullable: true }
+        page: { type: integer, nullable: true }
+        section: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+
+    SourceRead:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string }
+        canonical_url: { type: string }
+        title: { type: string }
+        publisher: { type: string }
+        version: { type: string, nullable: true }
+        date_publi: { type: string, format: date, nullable: true }
+        page: { type: integer, nullable: true }
+        section: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        verification_status: { type: string, enum: [pending, verified, outdated] }
+        captured_by: { type: string, format: uuid }
+        verified_by: { type: string, format: uuid, nullable: true }
+        verified_at: { type: string, format: date-time, nullable: true }
+        current_version: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    SourceCreated:
+      allOf:
+        - $ref: '#/components/schemas/SourceRead'
+        - type: object
+          properties:
+            head_warning:
+              type: object
+              nullable: true
+              properties:
+                status: { type: integer, nullable: true }
+                error: { type: string, nullable: true }
+
+    SourceUpdated:
+      allOf:
+        - $ref: '#/components/schemas/SourceRead'
+        - type: object
+          properties:
+            version_bumped: { type: boolean }
+
+    SourceListItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        publisher: { type: string }
+        url: { type: string }
+        verification_status: { type: string }
+        captured_by: { type: string, format: uuid }
+        captured_at: { type: string, format: date-time }
+        version: { type: string, nullable: true }
+        rank: { type: number, nullable: true }
+
+    SourceListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SourceListItem' }
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+
+    DuplicateConflict:
+      type: object
+      properties:
+        error: { type: string, example: DUPLICATE_SOURCE }
+        existing_id: { type: string, format: uuid }
+
+    ImpactResponse:
+      type: object
+      properties:
+        source_id: { type: string, format: uuid }
+        counters:
+          type: object
+          properties:
+            indicateurs: { type: integer }
+            criteres: { type: integer }
+            formules: { type: integer }
+            facteurs_emission: { type: integer }
+            documents_requis: { type: integer }
+            referentiels: { type: integer }
+            skills: { type: integer }
+            candidatures: { type: integer }
+        has_published_dependents: { type: boolean }
+        can_delete: { type: boolean }
+        can_mark_outdated: { type: boolean }
+
+    ImpactCategoryList:
+      type: object
+      properties:
+        category: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              status: { type: string }
+              version: { type: integer, nullable: true }
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+
+    UnsourcedClaimsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              claim_text: { type: string }
+              occurrences: { type: integer }
+              first_seen: { type: string, format: date-time }
+              last_seen: { type: string, format: date-time }
+              sample_context: { type: string }
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+
+    ValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc: { type: array, items: { type: string } }
+              msg: { type: string }
+              type: { type: string }

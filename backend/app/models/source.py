@@ -32,6 +32,7 @@ class Source(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     url: Mapped[str] = mapped_column(Text, nullable=False)
+    canonical_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     publisher: Mapped[str] = mapped_column(Text, nullable=False)
     version: Mapped[str | None] = mapped_column(Text, nullable=True)

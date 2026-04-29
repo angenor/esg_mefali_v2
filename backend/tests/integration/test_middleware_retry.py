@@ -47,7 +47,7 @@ def verified_sid():
         sid = source_service.create_pending(
             c,
             captured_by=a_id,
-            url="https://x.example/m",
+            url=f"https://x.example/m/{uuid.uuid4()}",
             title="MID Test",
             publisher="GCF",
         )
@@ -75,7 +75,7 @@ def pending_sid():
         sid = source_service.create_pending(
             c,
             captured_by=a_id,
-            url="https://x.example/mp",
+            url=f"https://x.example/mp/{uuid.uuid4()}",
             title="MIDP Test",
             publisher="GCF",
         )

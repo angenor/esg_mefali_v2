@@ -41,7 +41,7 @@ def verified_source_id():
         sid = source_service.create_pending(
             c,
             captured_by=a_id,
-            url="https://x.example/llm",
+            url=f"https://x.example/llm/{uuid.uuid4()}",
             title="LLM Tool Test",
             publisher="GCF",
         )
@@ -69,7 +69,7 @@ def pending_source_id():
         sid = source_service.create_pending(
             c,
             captured_by=a_id,
-            url="https://x.example/llmpending",
+            url=f"https://x.example/llmpending/{uuid.uuid4()}",
             title="Pending Test",
             publisher="GCF",
         )

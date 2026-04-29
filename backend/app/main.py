@@ -32,6 +32,7 @@ from app.api.routes.privacy import router as privacy_router
 from app.api.routes.sources import router as sources_router
 from app.api.routes.versioning import router as versioning_router
 from app.auth.router import router as auth_router
+from app.catalog.sources.router import router as catalog_sources_router
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
 from app.middleware.request_id import RequestIdMiddleware
@@ -76,6 +77,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(sources_router)
+app.include_router(catalog_sources_router)
 app.include_router(llm_tools_router)
 app.include_router(admin_unsourced_router)
 app.include_router(audit_log_router)
