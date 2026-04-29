@@ -104,6 +104,11 @@ from app.matching.router import router as matching_router  # noqa: E402
 
 app.include_router(matching_router)
 
+# F27 — Simulateur de financement (PME, lecture seule).
+from app.simulation.router import router as simulation_router  # noqa: E402
+
+app.include_router(simulation_router)
+
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
