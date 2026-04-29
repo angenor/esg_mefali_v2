@@ -16,6 +16,7 @@ class Base(DeclarativeBase):
 
 from app.models.account import Account  # noqa: E402,F401
 from app.models.account_user import AccountUser  # noqa: E402,F401
+from app.models.carbon_footprint import CarbonFootprint  # noqa: E402,F401
 from app.models.password_reset_token import PasswordResetToken  # noqa: E402,F401
 from app.models.refresh_token import RefreshToken  # noqa: E402,F401
 from app.models.skill import Skill, SkillSource  # noqa: E402,F401
@@ -26,6 +27,7 @@ __all__ = [
     "Account",
     "AccountUser",
     "Base",
+    "CarbonFootprint",
     "PasswordResetToken",
     "RefreshToken",
     "Skill",
