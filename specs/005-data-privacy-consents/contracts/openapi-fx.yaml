@@ -1,0 +1,91 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — FX & Money API
+  version: "0.1.0"
+  description: F05 — endpoints devises, taux et conversion.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /fx/rates:
+    get:
+      tags: [fx]
+      summary: Dernier taux pour un couple
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { $ref: '#/components/schemas/Currency' }
+        - in: query
+          name: to
+          required: true
+          schema: { $ref: '#/components/schemas/Currency' }
+        - in: query
+          name: as_of
+          required: false
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FxRate' }
+        '404':
+          description: Aucun taux connu
+  /fx/convert:
+    post:
+      tags: [fx]
+      summary: Convertit un Money vers une devise cible
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [money, to]
+              properties:
+                money: { $ref: '#/components/schemas/Money' }
+                to: { $ref: '#/components/schemas/Currency' }
+                as_of: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [result, rate_used, captured_at]
+                properties:
+                  result: { $ref: '#/components/schemas/Money' }
+                  rate_used: { type: string }
+                  captured_at: { type: string, format: date-time }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Currency:
+      type: string
+      enum: [XOF, EUR, USD, GHS, NGN, MAD, GBP]
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: '^\\d+(\\.\\d+)?$' }
+        currency: { $ref: '#/components/schemas/Currency' }
+    FxRate:
+      type: object
+      additionalProperties: false
+      required: [currency_from, currency_to, rate, captured_at]
+      properties:
+        currency_from: { $ref: '#/components/schemas/Currency' }
+        currency_to: { $ref: '#/components/schemas/Currency' }
+        rate: { type: string }
+        captured_at: { type: string, format: date-time }
+        is_peg: { type: boolean }

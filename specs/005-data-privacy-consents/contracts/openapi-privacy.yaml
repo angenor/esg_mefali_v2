@@ -1,0 +1,184 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Privacy & Consents API
+  version: "0.1.0"
+  description: F05 — endpoints conformité données personnelles, consentements, politique versionnée.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /me/donnees/summary:
+    get:
+      tags: [privacy]
+      summary: Résumé agrégé des données du compte courant
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSummary'
+  /me/donnees/export:
+    get:
+      tags: [privacy]
+      summary: Export complet en archive ZIP (manifest + JSON par catégorie + files/)
+      parameters:
+        - in: query
+          name: format
+          required: false
+          schema: { type: string, enum: [json], default: json }
+      responses:
+        '200':
+          description: ZIP stream
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+  /me/donnees/delete:
+    post:
+      tags: [privacy]
+      summary: Demande de suppression différée 30 jours
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionRequest' }
+        '409':
+          description: Une demande active existe déjà
+    delete:
+      tags: [privacy]
+      summary: Annule la demande de suppression en cours
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionRequest' }
+        '404':
+          description: Aucune demande active
+  /me/consentements:
+    get:
+      tags: [privacy]
+      summary: Liste des consentements et leur état
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Consent' }
+  /me/consentements/{kind}:
+    post:
+      tags: [privacy]
+      summary: Bascule (toggle) un consentement
+      parameters:
+        - in: path
+          name: kind
+          required: true
+          schema: { $ref: '#/components/schemas/ConsentKind' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [given]
+              properties:
+                given: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Consent' }
+  /politique-confidentialite:
+    get:
+      tags: [policy]
+      summary: Récupère la version courante de la politique (lecture publique)
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PolicyVersion' }
+  /me/policy-acceptance:
+    post:
+      tags: [policy]
+      summary: Accepte la version courante (ou majeure non acceptée)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [policy_version_id]
+              properties:
+                policy_version_id: { type: string, format: uuid }
+      responses:
+        '201': { description: Accepted }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ConsentKind:
+      type: string
+      enum: [mobile_money, exploitation_photos, public_attestation, long_history, marketing]
+    Consent:
+      type: object
+      additionalProperties: false
+      required: [kind, given, source_of_change]
+      properties:
+        kind: { $ref: '#/components/schemas/ConsentKind' }
+        given: { type: boolean }
+        given_at: { type: string, format: date-time, nullable: true }
+        withdrawn_at: { type: string, format: date-time, nullable: true }
+        source_of_change: { type: string, enum: [manual, llm, import, admin] }
+    DataSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [entity_type, count]
+            properties:
+              entity_type: { type: string }
+              count: { type: integer, minimum: 0 }
+              last_modified_at: { type: string, format: date-time, nullable: true }
+    DeletionRequest:
+      type: object
+      additionalProperties: false
+      required: [id, status, requested_at, effective_at]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [requested, cancelled, executed] }
+        requested_at: { type: string, format: date-time }
+        effective_at: { type: string, format: date-time }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+    PolicyVersion:
+      type: object
+      additionalProperties: false
+      required: [id, version, published_at, is_major, content_md]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: string }
+        published_at: { type: string, format: date-time }
+        is_major: { type: boolean }
+        content_md: { type: string }
+    ConsentRequiredError:
+      type: object
+      additionalProperties: false
+      required: [error, kind]
+      properties:
+        error: { type: string, enum: [consent_required] }
+        kind: { $ref: '#/components/schemas/ConsentKind' }
