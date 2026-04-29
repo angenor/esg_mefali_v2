@@ -11,10 +11,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-esg_mefali}
       POSTGRES_USER: ${POSTGRES_USER:-esg}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      # F02 : passwords pour rôles SQL app_user et migrator (créés par migration 0002).
+      # Vides en dev = mots de passe placeholder (cf. 0002_auth_rls.py).
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD:-app_user_dev_pwd}
+      MIGRATOR_PASSWORD: ${MIGRATOR_PASSWORD:-migrator_dev_pwd}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # init-roles.sh ne s'exécute que sur volume vierge ; en pratique les rôles
+      # sont créés par la migration Alembic 0002 (idempotent). Conservé en
+      # backup pour les déploiements neufs.
+      - ./scripts/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-esg} -d ${POSTGRES_DB:-esg_mefali}"]
       interval: 5s

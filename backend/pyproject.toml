@@ -11,7 +11,8 @@ extend-exclude = [".venv", "alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
-ignore = ["E501"]  # gérée par ruff format
+# E501 : gérée par ruff format. B008 : Depends() en default est idiomatique FastAPI.
+ignore = ["E501", "B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -23,7 +24,13 @@ markers = [
 
 [tool.coverage.run]
 source = ["app"]
-omit = ["app/__init__.py"]
+# Scripts CLI exécutés en CI/manuel, hors mesure unitaire.
+omit = [
+    "app/__init__.py",
+    "app/scripts/audit_routes.py",
+    "app/scripts/audit_logs.py",
+    "app/scripts/audit_rls.py",
+]
 
 [tool.coverage.report]
 fail_under = 80

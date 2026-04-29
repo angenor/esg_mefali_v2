@@ -42,8 +42,21 @@ class Settings(BaseSettings):
     # --- Identification application ---
     APP_URL: str = Field(..., min_length=1)
 
-    # --- Auth (utilisé en F02) ---
+    # --- Auth (F02) ---
     JWT_SECRET: str = Field(..., min_length=1)
+    CSRF_SECRET: str = "csrf-default-change-me"
+    COOKIE_DOMAIN: str = "localhost"
+    COOKIE_SECURE: bool = False
+    APP_USER_PASSWORD: str = ""
+    MIGRATOR_PASSWORD: str = ""
+
+    # --- Email (F02) ---
+    EMAIL_BACKEND: str = "console"
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    RESET_PASSWORD_BASE_URL: str = "http://localhost:3000/reset-password"
 
     # --- Embeddings (utilisé en F18) ---
     VOYAGE_API_KEY: str = Field(..., min_length=1)

@@ -5,7 +5,25 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-04-01",
   devtools: { enabled: true },
 
-  modules: ["@pinia/nuxt"],
+  modules: ["@pinia/nuxt", "nuxt-security"],
+
+  // F02 — Sécurité : headers HSTS, CSP minimal, X-Frame-Options, cookies par défaut.
+  security: {
+    headers: {
+      strictTransportSecurity: {
+        maxAge: 15552000,
+        includeSubdomains: true,
+      },
+      xFrameOptions: "DENY",
+      contentSecurityPolicy: {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:"],
+        "connect-src": ["'self'", "http://localhost:8000"],
+      },
+    },
+  },
 
   css: ["~/assets/css/main.css"],
 
