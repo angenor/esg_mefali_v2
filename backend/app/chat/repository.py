@@ -148,6 +148,54 @@ def list_messages(
     return [dict(r) for r in rows]
 
 
+def list_recent_messages(
+    db: Session,
+    *,
+    thread_id: UUID,
+    account_id: UUID,
+    limit: int = 15,
+) -> list[dict[str, Any]]:
+    """F18 — N derniers messages user/assistant en ordre chronologique ASC.
+
+    Récupère DESC puis renverse pour donner l'ordre du plus ancien au plus
+    récent (consommable directement par ``build_context``).
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT id, thread_id, role, content, payload_json, context_json, created_at
+            FROM chat_message
+            WHERE thread_id = :tid AND account_id = :aid
+              AND role IN ('user', 'assistant')
+              AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """
+        ),
+        {"tid": str(thread_id), "aid": str(account_id), "limit": int(limit)},
+    ).mappings().all()
+    return [dict(r) for r in reversed(rows)]
+
+
+def count_messages_in_thread(
+    db: Session, *, thread_id: UUID, account_id: UUID
+) -> int:
+    """F18 — Compte les messages user/assistant non supprimés d'un thread."""
+    row = db.execute(
+        text(
+            """
+            SELECT COUNT(*) AS n
+            FROM chat_message
+            WHERE thread_id = :tid AND account_id = :aid
+              AND role IN ('user', 'assistant')
+              AND deleted_at IS NULL
+            """
+        ),
+        {"tid": str(thread_id), "aid": str(account_id)},
+    ).first()
+    return int(row[0]) if row else 0
+
+
 def update_message_embedding(
     db: Session, *, message_id: UUID, embedding: list[float]
 ) -> None:
