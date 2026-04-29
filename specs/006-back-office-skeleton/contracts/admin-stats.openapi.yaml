@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: F06 — Admin catalog stats (sidebar)
+  version: 0.1.0
+
+paths:
+  /admin/stats/catalog:
+    get:
+      summary: Per-section catalog status counters (live, no cache)
+      responses:
+        '200':
+          description: Counters per registered entity
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    draft: { type: integer }
+                    published: { type: integer }
+                    outdated: { type: integer }
+                    pending: { type: integer }
+                example:
+                  demo_indicator:
+                    draft: 3
+                    published: 12
+                    outdated: 2
+                    pending: 0
+                  sources:
+                    draft: 5
+                    published: 87
+                    outdated: 4
+                    pending: 6
+        '403':
+          description: Not admin
