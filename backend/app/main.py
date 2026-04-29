@@ -197,6 +197,11 @@ from app.rapports.router import router as rapports_router  # noqa: E402
 
 app.include_router(rapports_router)
 
+# F31 — Plan d'action ESG (PME).
+from app.action_plan.routes import router as action_plan_router  # noqa: E402
+
+app.include_router(action_plan_router)
+
 
 @app.get("/health")
 def health() -> Any:

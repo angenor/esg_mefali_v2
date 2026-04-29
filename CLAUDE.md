@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/030-attestation-verifiable/plan.md
+specs/031-plan-action-rappels-bibliotheque/plan.md
 <!-- SPECKIT END -->
