@@ -34,6 +34,8 @@ from app.api.routes.sources import router as sources_router
 from app.api.routes.versioning import router as versioning_router
 from app.auth.router import router as auth_router
 from app.catalog.sources.router import router as catalog_sources_router
+from app.chat.api import events_router as chat_events_router
+from app.chat.api import router as chat_router
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
 from app.middleware.request_id import RequestIdMiddleware
@@ -87,6 +89,8 @@ app.include_router(candidatures_router)
 app.include_router(privacy_router)
 app.include_router(entreprise_router)
 app.include_router(entreprise_router)
+app.include_router(chat_router)
+app.include_router(chat_events_router)
 
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
