@@ -20,6 +20,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app import db as db_module
 from app.admin.router import router as admin_router
+from app.api.routes.admin_unsourced import router as admin_unsourced_router
+from app.api.routes.llm_tools import router as llm_tools_router
+from app.api.routes.sources import router as sources_router
 from app.auth.router import router as auth_router
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
@@ -61,6 +64,9 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
+app.include_router(sources_router)
+app.include_router(llm_tools_router)
+app.include_router(admin_unsourced_router)
 
 
 @app.get("/health")

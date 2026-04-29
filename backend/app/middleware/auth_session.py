@@ -45,6 +45,9 @@ class AuthSessionMiddleware(BaseHTTPMiddleware):
         if (
             request.method.upper() not in SAFE_METHODS
             and request.url.path not in CSRF_EXEMPT_PATHS
+            # Internal endpoints (consommés par F14 backend->backend) sont
+            # exemptés de CSRF — la sécurité repose sur l'isolement réseau.
+            and not request.url.path.startswith("/internal/")
         ):
             cookie_csrf = request.cookies.get(CSRF_COOKIE, "")
             header_csrf = request.headers.get(CSRF_HEADER, "")
