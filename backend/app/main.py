@@ -144,6 +144,11 @@ app.include_router(f09_facteurs_router)
 app.include_router(admin_publish_router)
 app.include_router(admin_crud_router)
 
+# F19 — Skills engine internal endpoint (dev/test only).
+from app.api.internal_skills import router as internal_skills_router  # noqa: E402
+
+app.include_router(internal_skills_router)
+
 
 @app.get("/health")
 def health() -> Any:
