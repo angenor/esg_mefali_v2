@@ -141,6 +141,12 @@ app.include_router(f09_criteres_router)
 app.include_router(f09_documents_router)
 app.include_router(f09_facteurs_router)
 
+# F20 — Admin Skills CRUD (must be mounted BEFORE the generic admin_crud_router
+# so /admin/skills/* is matched by the dedicated router, not the wildcard).
+from app.admin.routes.skills import router as admin_skills_router  # noqa: E402
+
+app.include_router(admin_skills_router)
+
 app.include_router(admin_publish_router)
 app.include_router(admin_crud_router)
 
