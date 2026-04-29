@@ -1,0 +1,146 @@
+openapi: 3.1.0
+info:
+  title: F23 Scoring ESG Multi-Référentiels API (PME)
+  version: 0.1.0
+  description: |
+    Endpoints PME pour le calcul et la lecture des scores ESG par référentiel.
+    Tous les endpoints requièrent un JWT PME (rôle pme). RLS strict.
+servers:
+  - url: /
+paths:
+  /me/scoring/{entity_type}/{entity_id}:
+    get:
+      summary: Liste des derniers scores par référentiel publié pour une entité
+      tags: [scoring]
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityId'
+      responses:
+        '200':
+          description: Liste des scores (un par référentiel publié)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entity_type: { type: string, enum: [entreprise, projet] }
+                  entity_id: { type: string, format: uuid }
+                  scores:
+                    type: array
+                    items: { $ref: '#/components/schemas/ScoreSummary' }
+        '404': { description: Entité inconnue ou hors tenant }
+        '401': { description: Non authentifié }
+
+  /me/scoring/{entity_type}/{entity_id}/{referentiel_code}:
+    get:
+      summary: Détail du dernier score pour un référentiel
+      tags: [scoring]
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityId'
+        - $ref: '#/components/parameters/ReferentielCode'
+      responses:
+        '200':
+          description: Détail du score
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScoreDetail' }
+        '404': { description: Référentiel ou entité inconnu(e), ou aucun score calculé }
+
+  /me/scoring/{entity_type}/{entity_id}/recompute:
+    post:
+      summary: Force un recalcul du score (nouveau snapshot)
+      tags: [scoring]
+      parameters:
+        - $ref: '#/components/parameters/EntityType'
+        - $ref: '#/components/parameters/EntityId'
+        - in: query
+          name: referentiel
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Score recalculé et persisté
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScoreDetail' }
+        '404': { description: Référentiel non publié ou entité hors tenant }
+
+components:
+  parameters:
+    EntityType:
+      in: path
+      name: entity_type
+      required: true
+      schema: { type: string, enum: [entreprise, projet] }
+    EntityId:
+      in: path
+      name: entity_id
+      required: true
+      schema: { type: string, format: uuid }
+    ReferentielCode:
+      in: path
+      name: referentiel_code
+      required: true
+      schema: { type: string, pattern: '^[A-Z][A-Z0-9_]*$' }
+
+  schemas:
+    ScoreSummary:
+      type: object
+      required: [referentiel_code, referentiel_version, computed_at]
+      properties:
+        referentiel_code: { type: string, example: ESG_MEFALI }
+        referentiel_id: { type: string, format: uuid }
+        referentiel_version: { type: integer, example: 1 }
+        score_global: { type: number, nullable: true, example: 72.50 }
+        scores_by_pillar:
+          type: object
+          additionalProperties: { type: number, nullable: true }
+          example: { E: 80.0, S: 70.0, G: null }
+        coverage_ratio: { type: number, nullable: true, example: 0.8 }
+        computed_at: { type: string, format: date-time, example: '2026-04-29T12:00:00Z' }
+
+    CoveredIndicator:
+      type: object
+      required: [indicateur_code, weight, contribution, source_id]
+      properties:
+        indicateur_id: { type: string, format: uuid }
+        indicateur_code: { type: string, example: EFFECTIFS_TOTAL }
+        pillar: { type: string, example: S }
+        value: { nullable: true }
+        normalized_value: { type: number, nullable: true }
+        weight: { type: number }
+        contribution: { type: number }
+        source_id: { type: string, format: uuid }
+
+    MissingIndicator:
+      type: object
+      required: [indicateur_code, reason]
+      properties:
+        indicateur_id: { type: string, format: uuid }
+        indicateur_code: { type: string }
+        pillar: { type: string }
+        reason:
+          type: string
+          enum:
+            - value_absent
+            - value_source_unmapped
+            - unsupported_value_type
+            - invalid_value
+            - referentiel_indicateur_misconfig
+
+    ScoreDetail:
+      allOf:
+        - $ref: '#/components/schemas/ScoreSummary'
+        - type: object
+          required: [indicateurs_couverts, indicateurs_manquants, sources_used]
+          properties:
+            indicateurs_couverts:
+              type: array
+              items: { $ref: '#/components/schemas/CoveredIndicator' }
+            indicateurs_manquants:
+              type: array
+              items: { $ref: '#/components/schemas/MissingIndicator' }
+            sources_used:
+              type: array
+              items: { type: string, format: uuid }
