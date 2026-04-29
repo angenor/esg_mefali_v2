@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/014-langgraph-routing-validation/plan.md
+specs/016-tools-visualisation-inline/plan.md
 <!-- SPECKIT END -->
