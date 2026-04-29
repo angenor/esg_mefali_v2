@@ -1,4 +1,10 @@
-"""Tools fictifs MVP (US4) — base de tests et démo."""
+"""Tools fictifs MVP (US4) — base de tests et démo.
+
+NOTE F15 : ``ask_qcu``, ``ask_yes_no`` et ``show_summary_card`` ont été
+déplacés vers ``app.orchestrator.tools`` avec des schémas riches.
+Seuls ``update_demo_profile`` et ``search_demo_source`` restent ici comme
+fixtures pour les tests d'orchestration.
+"""
 
 from __future__ import annotations
 
@@ -7,26 +13,6 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.orchestrator.tool_registry import tool
-
-
-class ShowSummaryCardPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    title: str = Field(min_length=1)
-    body: str = Field(min_length=1)
-
-
-class AskQcuPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    question: str = Field(min_length=1)
-    choices: list[str] = Field(min_length=2, max_length=6)
-
-
-class AskYesNoPayload(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    question: str = Field(min_length=1)
 
 
 class UpdateDemoProfilePayload(BaseModel):
@@ -44,29 +30,12 @@ class SearchDemoSourcePayload(BaseModel):
 
 
 def register_fixture_tools() -> None:
-    """Enregistre les 5 tools fictifs dans le registre global."""
-    tool(
-        name="show_summary_card",
-        description="Affiche une carte récapitulative en bottom sheet.",
-        use_when="L'utilisateur demande un résumé d'une entité.",
-        dont_use_when="L'utilisateur demande une mutation.",
-        schema=ShowSummaryCardPayload,
-        positive_examples=({"title": "Projet X", "body": "Résumé concis."},),
-    )
-    tool(
-        name="ask_qcu",
-        description="Pose une question à choix unique.",
-        use_when="Plusieurs options possibles à clarifier.",
-        dont_use_when="La question est binaire.",
-        schema=AskQcuPayload,
-    )
-    tool(
-        name="ask_yes_no",
-        description="Pose une question oui/non.",
-        use_when="Clarification binaire requise.",
-        dont_use_when="Plus de deux options.",
-        schema=AskYesNoPayload,
-    )
+    """Enregistre les tools de démonstration dans le registre global.
+
+    Pour les tools de réponse F15 (``ask_qcu``, ``ask_yes_no``,
+    ``show_summary_card``, etc.), utilisez
+    ``app.orchestrator.tools.register_response_tools``.
+    """
     tool(
         name="update_demo_profile",
         description="Met à jour un champ du profil de démonstration.",

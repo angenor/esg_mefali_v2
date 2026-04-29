@@ -63,12 +63,12 @@ def test_get_tool_unknown_raises() -> None:
         get_tool("nope")
 
 
-def test_fixture_tools_register_five() -> None:
+def test_fixture_tools_register_demo() -> None:
+    """Les fixtures F14 ne couvrent que les 2 tools de démo restants
+    (les tools de réponse ask_qcu/ask_yes_no/show_summary_card vivent
+    désormais dans ``app.orchestrator.tools`` — F15)."""
     register_fixture_tools()
     expected = {
-        "show_summary_card",
-        "ask_qcu",
-        "ask_yes_no",
         "update_demo_profile",
         "search_demo_source",
     }
