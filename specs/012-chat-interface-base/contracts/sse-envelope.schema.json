@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://esg-mefali.local/schemas/sse-envelope-f13.json",
+  "title": "F13 SSE Envelope",
+  "description": "Self-describing event envelope used on /me/chat/threads/{id}/messages (assistant stream) and /me/events (entity updates).",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "text_delta" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["delta"],
+          "properties": { "delta": { "type": "string" } }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "tool_call_started" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool_call_id", "name"],
+          "properties": {
+            "tool_call_id": { "type": "string" },
+            "name": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "tool_call_completed" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool_call_id"],
+          "properties": {
+            "tool_call_id": { "type": "string" },
+            "result": {}
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "message_done" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["message_id"],
+          "properties": { "message_id": { "type": "string", "format": "uuid" } }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "error" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": {
+            "code": { "type": "string" },
+            "detail": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "data"],
+      "properties": {
+        "type": { "const": "entity_updated" },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["entity_type", "entity_id"],
+          "properties": {
+            "entity_type": { "type": "string" },
+            "entity_id": { "type": "string" }
+          }
+        }
+      }
+    }
+  ]
+}

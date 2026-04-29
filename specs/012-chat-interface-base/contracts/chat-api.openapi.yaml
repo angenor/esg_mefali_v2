@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: F13 Chat API
+  version: 0.1.0
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    ContextJson:
+      type: object
+      additionalProperties: false
+      properties:
+        page: { type: string, nullable: true }
+        entity_type: { type: string, nullable: true }
+        entity_id: { type: string, nullable: true }
+        selection: { type: string, nullable: true }
+    ChatThread:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        archived: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ChatMessage:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        thread_id: { type: string, format: uuid, nullable: true }
+        role: { type: string, enum: [user, assistant, tool] }
+        content: { type: string }
+        payload_json: { type: object, nullable: true }
+        context_json:
+          oneOf: [{ $ref: '#/components/schemas/ContextJson' }, { type: 'null' }]
+        created_at: { type: string, format: date-time }
+    PostMessageBody:
+      type: object
+      required: [content, context_json]
+      additionalProperties: false
+      properties:
+        content: { type: string, maxLength: 32768 }
+        payload_json: { type: object, nullable: true }
+        context_json: { $ref: '#/components/schemas/ContextJson' }
+    Error:
+      type: object
+      properties: { detail: { type: string } }
+paths:
+  /me/chat/threads:
+    get:
+      summary: List my non-archived threads (newest first)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threads:
+                    type: array
+                    items: { $ref: '#/components/schemas/ChatThread' }
+    post:
+      summary: Create a new thread (default title Conversation du DD/MM/YYYY)
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                title: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatThread' }
+  /me/chat/threads/{thread_id}:
+    delete:
+      summary: Archive a thread (soft, append-only audit)
+      parameters:
+        - { name: thread_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Archived }
+        '404': { description: Not found }
+  /me/chat/threads/{thread_id}/messages:
+    get:
+      summary: List messages of a thread (paginated)
+      parameters:
+        - { name: thread_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: after_id, in: query, required: false, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items: { $ref: '#/components/schemas/ChatMessage' }
+        '404': { description: Not found }
+    post:
+      summary: Send a user message; receive assistant SSE stream
+      parameters:
+        - { name: thread_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PostMessageBody' }
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of typed envelopes (text_delta, tool_call_started, tool_call_completed, message_done, error).
+        '409':
+          description: Thread archived
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '413': { description: Payload too large }
+        '422': { description: Validation error }
+  /me/events:
+    get:
+      summary: SSE stream of cross-section events scoped to caller account
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Stream of entity_updated envelopes filtered by account_id server-side.
