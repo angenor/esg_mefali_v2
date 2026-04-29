@@ -114,6 +114,13 @@ from app.carbon.router import router as carbon_router  # noqa: E402
 
 app.include_router(carbon_router)
 
+# F29 — Credit scoring (collecte + algorithme hybride source).
+from app.credit.router import public_router as credit_public_router  # noqa: E402
+from app.credit.router import router as credit_router  # noqa: E402
+
+app.include_router(credit_router)
+app.include_router(credit_public_router)
+
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
