@@ -19,7 +19,11 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db as db_module
+from app.admin.crud_router import router as admin_crud_router
+from app.admin.publish import router as admin_publish_router
 from app.admin.router import router as admin_router
+from app.admin.search import router as admin_search_router
+from app.admin.stats import router as admin_stats_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
 from app.api.routes.candidatures import router as candidatures_router
@@ -78,6 +82,16 @@ app.include_router(audit_log_router)
 app.include_router(versioning_router)
 app.include_router(candidatures_router)
 app.include_router(privacy_router)
+
+# F06 — Back-office admin: register catalog entities, then mount generic routers.
+from app import catalog as _catalog_registrations  # noqa: E402, F401, I001 — side-effect: registers entities
+
+# NOTE: order matters — search/stats use literal paths under /admin and must be
+# matched BEFORE the generic /admin/{entity}/{id} CRUD routes.
+app.include_router(admin_search_router)
+app.include_router(admin_stats_router)
+app.include_router(admin_publish_router)
+app.include_router(admin_crud_router)
 
 
 @app.get("/health")

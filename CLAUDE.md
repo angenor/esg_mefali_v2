@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/005-data-privacy-consents/plan.md
+specs/006-back-office-skeleton/plan.md
 <!-- SPECKIT END -->

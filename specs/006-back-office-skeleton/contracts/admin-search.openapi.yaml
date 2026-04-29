@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  title: F06 — Admin global search
+  version: 0.1.0
+
+paths:
+  /admin/search:
+    get:
+      summary: Search across all registered catalog entities (ILIKE/trigram)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 2 }
+        - name: types
+          in: query
+          schema:
+            type: array
+            items: { type: string }
+          style: form
+          explode: false
+          description: optional restriction to entity names ; default = all
+      responses:
+        '200':
+          description: Grouped results, max 10 per type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query: { type: string }
+                  groups:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        entity: { type: string, example: 'demo_indicator' }
+                        items:
+                          type: array
+                          maxItems: 10
+                          items:
+                            type: object
+                            properties:
+                              id: { type: string, format: uuid }
+                              name: { type: string }
+                              publisher: { type: string, nullable: true }
+                              external_id: { type: string, nullable: true }
+                              status: { type: string }
+                              similarity: { type: number, minimum: 0, maximum: 1 }
+        '400':
+          description: q too short
