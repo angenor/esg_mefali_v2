@@ -1,0 +1,56 @@
+openapi: 3.1.0
+info:
+  title: F08 — Public Catalog API (PME)
+  version: 0.1.0
+  description: |
+    Endpoints lecture-seule pour les utilisateurs PME authentifiés (plateforme fermée).
+    Exclut systématiquement les statuts draft/archived/outdated. RLS Postgres applique
+    également la règle au niveau base.
+servers: [{ url: /catalog }]
+security: [{ BearerPME: [] }]
+paths:
+  /fonds:
+    get:
+      parameters:
+        - { name: type, in: query, schema: { type: string } }
+        - { name: thematique, in: query, schema: { type: string } }
+        - { name: pays, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      responses: { '200': { description: OK — only published } }
+  /fonds/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { responses: { '200': { description: OK }, '404': { description: Not found } } }
+  /intermediaires:
+    get:
+      parameters:
+        - { name: type, in: query, schema: { type: string } }
+        - { name: pays, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses: { '200': { description: OK — only published } }
+  /intermediaires/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { responses: { '200': { description: OK } } }
+  /offres:
+    get:
+      summary: Endpoint consommé par F25 (Matching) — exclut draft/archived/outdated
+      parameters:
+        - { name: fonds, in: query, schema: { type: string, format: uuid } }
+        - { name: intermediaire, in: query, schema: { type: string, format: uuid } }
+        - { name: pays, in: query, schema: { type: string } }
+        - { name: secteur, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses: { '200': { description: OK } }
+  /offres/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      summary: Détail Offre + effective inclus inline (read-friendly pour F25/F26)
+      responses: { '200': { description: OK avec effective embedded }, '404': { description: Not found or not published } }
+components:
+  securitySchemes:
+    BearerPME: { type: http, scheme: bearer, bearerFormat: JWT }

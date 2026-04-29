@@ -92,6 +92,21 @@ from app import catalog as _catalog_registrations  # noqa: E402, F401, I001 — 
 # matched BEFORE the generic /admin/{entity}/{id} CRUD routes.
 app.include_router(admin_search_router)
 app.include_router(admin_stats_router)
+
+# F08 — Catalog admin routers (Fonds, Intermediaire, Accreditation, Offre).
+# Must be registered BEFORE the generic publish/CRUD routers so that the
+# specialised paths under /admin/fonds, /admin/intermediaires, ... are not
+# shadowed by the wildcard /admin/{entity}/...
+from app.api.admin.accreditations import router as f08_acc_router  # noqa: E402
+from app.api.admin.fonds import router as f08_fonds_router  # noqa: E402
+from app.api.admin.intermediaires import router as f08_inter_router  # noqa: E402
+from app.api.admin.offres import router as f08_offres_router  # noqa: E402
+
+app.include_router(f08_fonds_router)
+app.include_router(f08_inter_router)
+app.include_router(f08_acc_router)
+app.include_router(f08_offres_router)
+
 app.include_router(admin_publish_router)
 app.include_router(admin_crud_router)
 
