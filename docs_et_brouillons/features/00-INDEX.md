@@ -15,7 +15,9 @@
 | Frontend | Nuxt 4 + Composition API + Pinia + TailwindCSS v4 + chart.js + mermaid + Leaflet + gsap + driver.js + fontawesome + toast-ui/editor |
 | Orchestration LLM front | LangGraph (LangChain en utilitaire) |
 | Backend | FastAPI (Python) |
-| LLM | minimax-m2.7 via OpenRouter (interchangeable) |
+| LLM | minimax-m2.7 via OpenRouter (interchangeable via `LLM_BASE_URL` + `LLM_MODEL`) |
+| Embeddings | **Voyage AI** (`voyage-3.5`, 1024 dimensions, multilingue performant pour le français) — clé `VOYAGE_API_KEY` |
+| Speech-to-Text | **Replicate** (Whisper) — clé `REPLICATE_API_TOKEN` (pour audio dans F22) |
 | BDD | PostgreSQL + pgvector + Row-Level Security |
 | Stockage docs | Local (MinIO/S3 plus tard) |
 | File d'attente | Synchrone MVP (Redis + Celery plus tard) |
