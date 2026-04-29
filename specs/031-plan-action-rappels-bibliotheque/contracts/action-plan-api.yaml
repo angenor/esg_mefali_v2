@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali - F31 Action Plan API (MVP)
+  version: 0.1.0
+  description: |
+    PME-facing endpoints for the personalized ESG action plan (MVP).
+    Authentication: Bearer JWT, role `pme`. RLS enforced via account_id.
+servers:
+  - url: /
+paths:
+  /me/action-plan/generate:
+    post:
+      operationId: generateActionPlan
+      summary: Génère (ou régénère) le plan d'action de la PME courante
+      description: |
+        Crée une nouvelle version de plan en s'appuyant sur le dernier
+        ScoreCalculation (F23) du compte. Si aucun calcul n'existe, renvoie 422.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: horizon
+          required: true
+          schema:
+            type: integer
+            enum: [6, 12, 24]
+          description: Horizon en mois (6, 12 ou 24).
+      responses:
+        "201":
+          description: Plan généré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionPlanRead'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "422":
+          description: Aucun ScoreCalculation disponible ou horizon invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /me/action-plan:
+    get:
+      operationId: getCurrentActionPlan
+      summary: Renvoie le plan d'action courant (dernière version)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Plan courant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionPlanRead'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Aucun plan généré
+  /me/action-plan/steps/{step_id}:
+    patch:
+      operationId: patchActionStep
+      summary: Met à jour le statut ou le responsable d'une étape
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: step_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActionStepPatch'
+      responses:
+        "200":
+          description: Étape mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionStepRead'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Étape introuvable (ou cross-tenant)
+        "422":
+          description: Payload invalide (status hors enum, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Unauthorized:
+      description: Non authentifié
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Rôle non autorisé
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: string
+    Category:
+      type: string
+      enum: [esg, carbone, credit, candidature]
+    Priority:
+      type: string
+      enum: [haute, moyenne, basse]
+    Status:
+      type: string
+      enum: [todo, doing, done, postponed]
+    Horizon:
+      type: integer
+      enum: [6, 12, 24]
+    ActionStepRead:
+      type: object
+      required:
+        - id
+        - plan_id
+        - title
+        - category
+        - priority
+        - horizon_at
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id: { type: string, format: uuid }
+        plan_id: { type: string, format: uuid }
+        title: { type: string, minLength: 3, maxLength: 200 }
+        description: { type: string, nullable: true }
+        category: { $ref: '#/components/schemas/Category' }
+        priority: { $ref: '#/components/schemas/Priority' }
+        horizon_at: { type: string, format: date, example: "2026-10-29" }
+        status: { $ref: '#/components/schemas/Status' }
+        responsible_user_id: { type: string, format: uuid, nullable: true }
+        indicateur_id: { type: string, format: uuid, nullable: true }
+        source_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ActionStepPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        status: { $ref: '#/components/schemas/Status' }
+        responsible_user_id: { type: string, format: uuid, nullable: true }
+      minProperties: 1
+    ActionPlanRead:
+      type: object
+      required:
+        - id
+        - account_id
+        - horizon_months
+        - version
+        - generated_at
+        - steps
+      properties:
+        id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        horizon_months: { $ref: '#/components/schemas/Horizon' }
+        version: { type: integer, minimum: 1 }
+        score_calculation_id: { type: string, format: uuid, nullable: true }
+        generated_at: { type: string, format: date-time, example: "2026-04-29T10:00:00Z" }
+        generated_by_user_id: { type: string, format: uuid, nullable: true }
+        steps:
+          type: array
+          items: { $ref: '#/components/schemas/ActionStepRead' }
