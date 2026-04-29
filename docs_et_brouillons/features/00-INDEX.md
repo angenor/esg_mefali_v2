@@ -42,7 +42,7 @@ Aucune feature métier ne peut s'en affranchir. À implémenter en premier, dans
 |---|---|---|---|
 | 01 | Initialisation stack & modèle multi-tenant | Architecture technique, 0.7 | — |
 | 02 | Authentification & rôles PME/Admin (RLS) | 0.2 | 01 |
-| 03 | Entité Source & sourçage anti-hallucination | 0.1 | 01, 02 |
+| 03 | Entité Source & sourçage anti-hallucination | 0.1 | 01, 02 | _ready_for_implement → **livré**_
 | 04 | Audit log append-only & versioning | 0.4, 0.5 | 01, 02 |
 | 05 | Conformité données personnelles & consentements | 0.3, 0.6 | 02, 04 |
 

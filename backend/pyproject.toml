@@ -20,6 +20,8 @@ asyncio_mode = "auto"
 addopts = "-q --strict-markers"
 markers = [
     "integration: tests requérant Postgres up (skip si DB indispo)",
+    "unit: tests unitaires rapides (peuvent toucher la DB pour smoke)",
+    "perf: tests de performance (smoke p95)",
 ]
 
 [tool.coverage.run]

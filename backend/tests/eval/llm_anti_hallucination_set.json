@@ -1,0 +1,102 @@
+[
+  {
+    "name": "neg_chiffre_tCO2e_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le projet émet 12.5 tCO2e par an.", "tool_calls": []}
+  },
+  {
+    "name": "neg_seuil_pourcent_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le seuil de réduction est 30%.", "tool_calls": []}
+  },
+  {
+    "name": "neg_montant_FCFA_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le ticket minimum est 5 000 000 FCFA.", "tool_calls": []}
+  },
+  {
+    "name": "neg_critere_keyword_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le critère GCF impose une diligence renforcée.", "tool_calls": []}
+  },
+  {
+    "name": "neg_kWh_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "La consommation est de 2400 kWh.", "tool_calls": []}
+  },
+  {
+    "name": "neg_indicateur_keyword_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "L'indicateur retenu est l'intensité carbone.", "tool_calls": []}
+  },
+  {
+    "name": "neg_EUR_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le coût d'investissement est 250000 EUR.", "tool_calls": []}
+  },
+  {
+    "name": "neg_cite_inexistant",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le seuil GCF est 30%.", "tool_calls": [{"id": "c1", "type": "function", "function": {"name": "cite_source", "arguments": "{\"source_id\": \"00000000-0000-0000-0000-000000000000\"}"}}]}
+  },
+  {
+    "name": "neg_referentiel_keyword_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le référentiel GRI s'applique aux entreprises cotées.", "tool_calls": []}
+  },
+  {
+    "name": "neg_facteur_emission_sans_cite",
+    "expected_accept": false,
+    "message": {"role": "assistant", "content": "Le facteur d'émission du diesel est 2.68 kgCO2e/L.", "tool_calls": []}
+  },
+  {
+    "name": "pos_pas_de_chiffre_esg",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Bonjour, comment puis-je vous aider ?", "tool_calls": []}
+  },
+  {
+    "name": "pos_question_user_simple",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Pouvez-vous préciser votre secteur ?", "tool_calls": []}
+  },
+  {
+    "name": "pos_chiffre_narratif_sans_unite",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Vous êtes la 3ème entreprise à me poser cette question aujourd'hui.", "tool_calls": []}
+  },
+  {
+    "name": "pos_explication_generale",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "L'évaluation ESG comporte plusieurs étapes.", "tool_calls": []}
+  },
+  {
+    "name": "pos_clarification_demande",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Souhaitez-vous comparer plusieurs offres ?", "tool_calls": []}
+  },
+  {
+    "name": "pos_ack_action_user",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "C'est bien noté.", "tool_calls": []}
+  },
+  {
+    "name": "pos_intro_sans_chiffre",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Je vais vérifier les sources disponibles.", "tool_calls": []}
+  },
+  {
+    "name": "pos_question_ouverte",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Quelle est votre principale préoccupation actuellement ?", "tool_calls": []}
+  },
+  {
+    "name": "pos_resume_dialogue",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Voici la liste des étapes que nous avons couvertes.", "tool_calls": []}
+  },
+  {
+    "name": "pos_message_attente",
+    "expected_accept": true,
+    "message": {"role": "assistant", "content": "Merci de patienter, je consulte les informations.", "tool_calls": []}
+  }
+]
