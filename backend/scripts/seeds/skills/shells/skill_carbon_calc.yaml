@@ -1,0 +1,19 @@
+# F21 — Skill shell (draft, prompt expert a completer par equipe metier).
+name: skill_carbon_calc
+version: 1
+domain: carbon
+language_default: fr
+status_target: draft
+sources: []
+activation_rules:
+  any_of:
+    - {page: "/profil/*"}
+tool_whitelist:
+  - ask_number show_kpi_card show_bar_chart
+prompt_expert: |
+  TODO equipe metier — completer le prompt expert pour la skill skill_carbon_calc.
+  Cette shell est en draft : elle ne sera pas activee tant que le
+  prompt nexpose pas une procedure validee.
+procedure: |
+  1. A definir.
+golden_examples: []

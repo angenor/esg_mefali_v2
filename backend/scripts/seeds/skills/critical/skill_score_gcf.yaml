@@ -1,0 +1,90 @@
+# F21 — Skill critique : scoring GCF (8 criteres d'investissement).
+name: skill_score_gcf
+version: 1
+domain: score_gcf
+language_default: fr
+status_target: published
+sources:
+  - {publisher: "GCF", title_match: "Investment Framework"}
+  - {publisher: "GCF", title_match: "Initial Investment Criteria"}
+activation_rules:
+  any_of:
+    - {offre_fonds: "GCF"}
+    - {page: "/projets/*/score-gcf"}
+tool_whitelist:
+  - ask_qcu
+  - ask_qcm
+  - ask_number
+  - show_radar_chart
+  - show_kpi_card
+  - show_bar_chart
+  - show_summary_card
+prompt_expert: |
+  Tu es l'expert scoring GCF. Tu evalues un projet PME selon les 8
+  criteres d'investissement officiels du Green Climate Fund :
+
+  1. Impact potentiel (mitigation + adaptation).
+  2. Paradigm shift potential.
+  3. Sustainable development potential (SDG).
+  4. Recipient country needs.
+  5. Country ownership.
+  6. Efficiency and effectiveness.
+  7. Innovation and replicability.
+  8. Financial viability.
+
+  Pour chaque critere, mobilise les indicateurs sourcees (F09)
+  correspondants. Si une donnee manque, pose une question structuree.
+  Calcule un score par critere /100, puis le score global pondere
+  selon la matrice GCF officielle. Explique chaque chiffre avec une
+  source GCF citable.
+
+  Tools : ask_* pour les donnees manquantes, show_radar_chart pour la
+  vue 8 axes, show_bar_chart pour le top 3 axes faibles, show_kpi_card
+  pour le score global, show_summary_card pour les recommandations.
+
+  Regles : (1) toute valeur quantitative = source GCF ; (2) langue
+  francaise par defaut ; (3) si offre.accepted_languages contient
+  uniquement "en", basculer en anglais ; (4) ne jamais promettre un
+  impact non quantifie.
+procedure: |
+  1. Identifier les 8 criteres GCF et leurs indicateurs F09 associes.
+  2. Pour chaque critere, evaluer la couverture des donnees
+     (complet / partiel / absent).
+  3. Pour les donnees manquantes, poser des questions ciblees via
+     ask_qcu / ask_qcm / ask_number.
+  4. Calculer le score par critere (0-100), puis le score global
+     pondere selon la matrice GCF.
+  5. Produire un radar 8 axes + bar chart des axes faibles + KPI
+     score global + summary recommandations.
+  6. Vigilance : citer une source GCF officielle pour chaque chiffre.
+golden_examples:
+  - input_message: "Calcule le score GCF de mon projet solaire."
+    page_context: "/projets/abc/score-gcf"
+    intent: "analyse"
+    expected_tool: "show_radar_chart"
+    expected_payload_partial:
+      axes: ["Impact", "Paradigm", "SDG", "CountryNeeds", "Ownership", "Efficiency", "Innovation", "Viability"]
+  - input_message: "Quel est mon score sur le critere Innovation ?"
+    page_context: "/projets/abc/score-gcf/innovation"
+    intent: "question"
+    expected_tool: "show_kpi_card"
+    expected_payload_partial:
+      label: "Innovation"
+  - input_message: "Combien de tonnes CO2 evitees par an ?"
+    page_context: "/projets/abc/score-gcf/impact"
+    intent: "question"
+    expected_tool: "ask_number"
+    expected_payload_partial:
+      label: "CO2 evitees"
+  - input_message: "Montre-moi mes 3 axes les plus faibles."
+    page_context: "/projets/abc/score-gcf"
+    intent: "analyse"
+    expected_tool: "show_bar_chart"
+    expected_payload_partial:
+      orientation: "horizontal"
+  - input_message: "Donne-moi les recommandations pour ameliorer le score."
+    page_context: "/projets/abc/score-gcf/synthese"
+    intent: "analyse"
+    expected_tool: "show_summary_card"
+    expected_payload_partial:
+      title: "Recommandations GCF"

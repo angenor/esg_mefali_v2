@@ -1,0 +1,88 @@
+# F21 — Skill critique : diagnostic ESG general d'une PME (Module 2).
+name: skill_esg_diagnostic
+version: 1
+domain: diagnostic_esg
+language_default: fr
+status_target: published
+sources:
+  - {publisher: "Mefali", title_match: "Referentiel ESG"}
+  - {publisher: "ADEME", title_match: "Base Carbone"}
+  - {publisher: "GRI", title_match: "Standards"}
+activation_rules:
+  any_of:
+    - {page: "/diagnostic/*"}
+    - {intent: "analyse"}
+    - {page: "/profil/*"}
+tool_whitelist:
+  - ask_qcu
+  - ask_qcm
+  - ask_number
+  - ask_file_upload
+  - show_summary_card
+  - show_radar_chart
+  - show_kpi_card
+prompt_expert: |
+  Tu es l'expert ESG de Mefali. Ton role est de produire un diagnostic
+  ESG general d'une PME en 4 etapes structurees.
+
+  Etape 1 — Extraction : a partir du contexte conversation et des
+  documents disponibles, identifie les elements E (environnement),
+  S (social), G (gouvernance) deja connus.
+
+  Etape 2 — Grille : projette ces elements sur la grille ESG Mefali
+  (axes E/S/G, sous-axes par axe). Note le niveau de couverture par
+  sous-axe : "absent", "partiel", "complet".
+
+  Etape 3 — Questions ciblees : pour chaque sous-axe "absent" ou
+  "partiel", pose UNE question via ask_qcu / ask_qcm / ask_number /
+  ask_file_upload. Maximum 5 questions par tour.
+
+  Etape 4 — Synthese : produis un show_radar_chart (axes E, S, G),
+  un show_summary_card (3 forces, 3 faiblesses, 3 actions
+  prioritaires), un show_kpi_card sur le score global sur 100.
+
+  Regles : (1) chiffre cite = source obligatoire ; (2) jamais
+  d'invention quantitative ; (3) si donnee manquante, demander
+  plutot que supposer ; (4) langue francaise par defaut.
+procedure: |
+  1. Extraire les elements E/S/G presents dans la conversation et les
+     documents PME disponibles (consentement RGPD requis).
+  2. Projeter sur la grille ESG Mefali (E: emissions, energie, eau,
+     dechets ; S: emploi, formation, securite, communaute ; G:
+     transparence, ethique, conformite).
+  3. Pour chaque sous-axe non couvert, poser une question structuree
+     via les tools de la whitelist. Maximum 5 questions par tour.
+  4. Synthetiser sous forme de radar + summary + KPI global.
+  5. Vigilance : ne jamais quantifier sans source ; signaler si une
+     reponse PME contredit un document depose.
+golden_examples:
+  - input_message: "Je suis une PME agro de 80 employes. Aide-moi a faire un diagnostic ESG."
+    page_context: "/diagnostic"
+    intent: "analyse"
+    expected_tool: "show_radar_chart"
+    expected_payload_partial:
+      axes: ["E", "S", "G"]
+  - input_message: "Quelle est notre consommation electrique mensuelle ?"
+    page_context: "/diagnostic/E"
+    intent: "question"
+    expected_tool: "ask_number"
+    expected_payload_partial:
+      label: "consommation"
+  - input_message: "Voici notre rapport RSE 2025."
+    page_context: "/diagnostic/documents"
+    intent: "mutation"
+    expected_tool: "ask_file_upload"
+    expected_payload_partial:
+      accept: ["pdf"]
+  - input_message: "Combien d'employes formes a la securite cette annee ?"
+    page_context: "/diagnostic/S"
+    intent: "question"
+    expected_tool: "ask_number"
+    expected_payload_partial:
+      label: "employes"
+  - input_message: "Donne-moi un resume du diagnostic."
+    page_context: "/diagnostic/synthese"
+    intent: "analyse"
+    expected_tool: "show_summary_card"
+    expected_payload_partial:
+      title: "Diagnostic ESG"

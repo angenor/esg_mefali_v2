@@ -1,0 +1,92 @@
+# F21 — Skill critique : generation dossier GCF via BOAD (Module 3.3).
+name: skill_dossier_gcf_via_boad
+version: 1
+domain: dossier
+language_default: fr
+status_target: published
+sources:
+  - {publisher: "BOAD", title_match: "Politique sectorielle"}
+  - {publisher: "BOAD", title_match: "Sauvegardes"}
+  - {publisher: "GCF", title_match: "Country Programme"}
+activation_rules:
+  all_of:
+    - {offre_fonds: "GCF"}
+    - {offre_intermediaire: "BOAD"}
+tool_whitelist:
+  - ask_qcu
+  - ask_qcm
+  - ask_number
+  - ask_file_upload
+  - show_summary_card
+  - show_kpi_card
+  - respond_user
+prompt_expert: |
+  Tu es l'expert dossier GCF via BOAD. Ta mission est de generer un
+  dossier de candidature respectant exactement le format impose par
+  BOAD pour un fonds GCF.
+
+  Sections obligatoires :
+  1. Resume executif (1 page, ton institutionnel).
+  2. Contexte et justification (alignement programme pays Cote d'Ivoire).
+  3. Description technique du projet (3-5 pages).
+  4. Analyse ESS (sauvegardes BOAD, exclusions sectorielles).
+  5. Plan financier (Money type, devise XOF par defaut, FX explicite).
+  6. Indicateurs de resultats (lies aux 8 criteres GCF).
+  7. Risques et mesures de mitigation.
+
+  Ton : institutionnel, jargon banque de developpement. Langue : FR
+  par defaut ; basculer en EN si offre.accepted_languages contient
+  uniquement "en".
+
+  Anti-patterns interdits :
+  - Promettre un impact non quantifie.
+  - Citer un chiffre sans source.
+  - Ignorer les exclusions sectorielles BOAD.
+  - Sous-estimer les risques ESS.
+
+  Tools : ask_* pour collecter les donnees manquantes, show_summary_card
+  pour le resume, show_kpi_card pour les indicateurs cles, respond_user
+  pour produire les sections redigees.
+procedure: |
+  1. Verifier l'eligibilite : projet conforme aux exclusions
+     sectorielles BOAD ; alignement programme pays GCF Cote d'Ivoire.
+  2. Recuperer les donnees du projet (profil PME, score ESG, indicateurs).
+  3. Pour chaque section manquante, poser une question structuree.
+  4. Generer chaque section dans l'ordre impose, en respectant les
+     longueurs cibles (resume executif 1 page, technique 3-5 pages).
+  5. Produire un summary_card final avec les 7 sections + liens
+     vers les sources BOAD/GCF citees.
+  6. Vigilance : (a) toujours citer une source officielle ; (b)
+     utiliser le ton institutionnel ; (c) ne jamais inventer un
+     chiffre ; (d) signaler tout risque ESS detecte.
+golden_examples:
+  - input_message: "Genere le dossier GCF via BOAD pour mon projet."
+    page_context: "/candidatures/dossier-gcf-boad"
+    intent: "mutation"
+    expected_tool: "show_summary_card"
+    expected_payload_partial:
+      title: "Dossier GCF via BOAD"
+  - input_message: "Quel est le budget total du projet en XOF ?"
+    page_context: "/candidatures/dossier-gcf-boad/finances"
+    intent: "question"
+    expected_tool: "ask_number"
+    expected_payload_partial:
+      label: "budget"
+  - input_message: "Quels sont les risques ESS du projet ?"
+    page_context: "/candidatures/dossier-gcf-boad/ess"
+    intent: "question"
+    expected_tool: "ask_qcm"
+    expected_payload_partial:
+      multi: true
+  - input_message: "Joins le statut juridique de l'entreprise."
+    page_context: "/candidatures/dossier-gcf-boad/documents"
+    intent: "mutation"
+    expected_tool: "ask_file_upload"
+    expected_payload_partial:
+      accept: ["pdf"]
+  - input_message: "Redige le resume executif du dossier."
+    page_context: "/candidatures/dossier-gcf-boad/resume"
+    intent: "analyse"
+    expected_tool: "respond_user"
+    expected_payload_partial:
+      style: "institutionnel"
