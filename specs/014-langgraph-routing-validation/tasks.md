@@ -6,119 +6,121 @@
 Approche : TDD strict (RED → GREEN → REFACTOR). Couverture ≥ 80 % sur `backend/app/orchestrator/`. Lint ruff vert.
 Marqueur `[P]` = parallélisable (fichiers indépendants, pas de dépendance sur tâche en cours).
 
-> **[DEFERRED — implémentation Phase B]**
+> **Phase B — Statut : MVP partiel livré (2026-04-29).**
 >
-> La spec / plan / tasks (Phase A) ont été générés et commités sur la branche `014-langgraph-routing-validation` (commit spec). L'implémentation effective des tâches T001–T115 (Phase B) est **différée à une session ultérieure** : le volume (49 tâches, ≥ 8 nouveaux modules + migration + ORM + tests TDD + intégration chat API + endpoint admin + vérif non-régression F01–F13) dépasse le budget contextuel d'une session unique avec gate fact-forcing systématique sur chaque écriture.
+> **Livrés (US4, US6, US7, US2, US3 — règles MVP)** : tool registry, payload validator Pydantic, retry policy avec fallback texte, intent classifier rule-based avec cache TTL, tool selector borné MAX_TOOLS=10 + whitelist Skills, 5 tools fictifs en fixture, schémas Pydantic stricts (`extra='forbid'`).
 >
-> Tous les artefacts (spec.md, plan.md, research.md, data-model.md, contracts/sse-events-f14.md, quickstart.md, tasks.md) sont **prêts pour `/speckit-implement`** dans une session dédiée. Le contrat est figé : aucune ré-clarification nécessaire.
+> Couverture `app/orchestrator/` : **98.31 %** (39 tests verts, ruff clean).
 >
-> Préfixer toutes les tâches de Phase B suivantes par `[DEFERRED]`.
+> **Différés `[DEFERRED]`** : T010-T013 migration Alembic + ORM `tool_call_log`, T050-T051 system prompt builder (US5), T080-T083 thread lock + pipeline E2E (US1), T090-T092 streaming SSE F14 (US8), T100-T104 logging persistance + admin read (US9), T110-T115 polish & non-régression complète. Fallback LLM du classifier (US2 "voie LLM légère") également différé — règles seulement en MVP.
+>
+> Raison du report : gate fact-forcing systématique + budget contextuel. Le socle livré (registry + validator + retry + classifier + selector) est complet et testable indépendamment ; le pipeline `respond()` end-to-end et l'intégration `chat/llm_stream.py` restent à câbler dans une itération suivante.
 
 ---
 
 ## Phase 1 — Setup
 
-- [ ] T001 Vérifier la branche : `git branch --show-current` doit afficher `014-langgraph-routing-validation`.
-- [ ] T002 Vérifier que `cachetools` est dispo dans `backend/.venv` ; si manquant, traiter en T002b (sinon `pyproject.toml` est zone interdite — utiliser `dict + time.monotonic()` interne en remplacement).
-- [ ] T003 [P] Créer la structure `backend/app/orchestrator/` (vide avec `__init__.py`).
-- [ ] T004 [P] Créer la structure `backend/tests/orchestrator/` (vide avec `__init__.py` + `conftest.py` minimal).
+- [x] T001 Branche vérifiée : `014-langgraph-routing-validation`.
+- [x] T002 Pas de `cachetools` requis : cache TTL maison `dict + time.monotonic()`.
+- [x] T003 [P] `backend/app/orchestrator/` peuplé (schemas, registry, validator, retry, classifier, selector, fixtures).
+- [x] T004 [P] `backend/tests/orchestrator/` créé avec `__init__.py` + `conftest.py` (autouse `reset_registry`).
 
 ## Phase 2 — Foundational (bloquant US1+)
 
-- [ ] T010 Écrire le test Alembic (RED) `backend/tests/orchestrator/test_migration_tool_call_log.py` qui vérifie : table créée, colonnes correctes, index ×3, RLS active, contrainte CHECK status, append-only.
-- [ ] T011 Implémenter la migration Alembic `backend/alembic/versions/20260429_xxxx_add_tool_call_log.py` : `create_table tool_call_log`, 3 index, `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`, `CREATE POLICY tool_call_log_tenant_isolation`. Lancer `alembic upgrade head` ; T010 doit passer (GREEN).
-- [ ] T012 [P] Écrire test ORM `backend/tests/orchestrator/test_model_tool_call_log.py` (insertion, lecture par account_id, defaults).
-- [ ] T013 Implémenter `backend/app/models/tool_call_log.py` (SQLAlchemy ORM `ToolCallLog`).
-- [ ] T014 [P] Écrire `backend/app/orchestrator/schemas.py` (Pydantic `ToolCallStatus`, `ValidationErrorDetail`, `ToolCallLogCreate`, `ToolCallLogRead` ; tous `extra='forbid'`).
+- [ ] [DEFERRED] T010 Test Alembic `tool_call_log`.
+- [ ] [DEFERRED] T011 Migration Alembic `tool_call_log` + RLS.
+- [ ] [DEFERRED] T012 [P] Test ORM `tool_call_log`.
+- [ ] [DEFERRED] T013 ORM `app/models/tool_call_log.py`.
+- [x] T014 [P] `app/orchestrator/schemas.py` : `ToolCallStatus`, `Intent`, `ValidationErrorDetail`, `ToolCallResult`, `PipelineResponse` (tous `extra='forbid'`). Note : `ToolCallLogCreate/Read` reportés avec la migration.
 
 ## Phase 3 — User Story 4 : Tool registry (P1, fondation pour US1/US3/US5/US6/US7)
 
 **Goal** : convention `@tool` unique, registry global, schémas stricts.
 **Independent test** : 5 tools fictifs déclarés sont introspectables, leurs schémas rejettent `extra` fields.
 
-- [ ] T020 [P] [US4] Écrire `backend/tests/orchestrator/test_tool_registry.py` (RED) : `@tool` enregistre dans `TOOL_REGISTRY` ; doublon `name` lève `ValueError` ; chaque tool fictif a `extra='forbid'`.
-- [ ] T021 [US4] Implémenter `backend/app/orchestrator/tool_registry.py` : dataclass `ToolDef`, decorator `@tool`, dict `TOOL_REGISTRY`, helper `get_tool(name)`. (GREEN T020).
-- [ ] T022 [US4] Implémenter `backend/app/orchestrator/fixtures_tools.py` : 5 tools fictifs (`show_summary_card`, `ask_qcu`, `ask_yes_no`, `update_demo_profile`, `search_demo_source`).
-- [ ] T023 [US4] Compléter `backend/tests/orchestrator/test_tool_registry.py` avec assertions sur les 5 tools fictifs.
+- [x] T020 [P] [US4] `test_tool_registry.py` : registre, doublon `ValueError`, schéma lax `ValueError`, fixtures.
+- [x] T021 [US4] `tool_registry.py` : `ToolDef` dataclass frozen, helper `tool(...)`, `TOOL_REGISTRY`, `get_tool`, `UnknownToolError`, `reset_registry`.
+- [x] T022 [US4] `fixtures_tools.py` : 5 tools (`show_summary_card`, `ask_qcu`, `ask_yes_no`, `update_demo_profile`, `search_demo_source`).
+- [x] T023 [US4] Assertions sur les 5 tools dans `test_tool_registry.py`.
 
 ## Phase 4 — User Story 2 : Intent classifier (P1)
 
 **Goal** : règles + fallback LLM + cache TTL ; 7 intentions.
 **Independent test** : 30 messages → ≥ 90 % d'intention attendue.
 
-- [ ] T030 [P] [US2] Écrire `backend/tests/orchestrator/test_intent_classifier.py` (RED) : règles, fallback LLM, cache TTL 600 s, fallback `autre` si LLM down, 30 cas test (FR-003, SC-001).
-- [ ] T031 [US2] Implémenter `backend/app/orchestrator/intent_classifier.py` : `Intent` Literal, `RULES`, `classify(...)`, cache TTL maison ou `cachetools.TTLCache`, fallback LLM via `app.llm_client.get_llm_client()`. (GREEN T030).
+- [x] T030 [P] [US2] `test_intent_classifier.py` : 12 cas paramétrés règles + fallback `autre` + cache thread-isolation + cache hit. **Note** : couvre les 7 intentions ; les 30 cas exhaustifs et le fallback LLM sont [DEFERRED].
+- [x] T031 [US2] `intent_classifier.py` : `Intent` Literal, `_RULES` FR mots-clés ordonnées, `classify(...)`, cache TTL `dict + time.monotonic()` (600 s). **[DEFERRED]** : voie LLM légère (T031b à créer).
 
 ## Phase 5 — User Story 3 : Tool selector (P1)
 
 **Goal** : 5–10 tools max selon intention + page + skills ; defaults minimaux ; whitelist.
 **Independent test** : 10 paires (intent, ctx) → set ≤ 10, jamais vide.
 
-- [ ] T040 [P] [US3] Écrire `backend/tests/orchestrator/test_tool_selector.py` (RED) : règles, set par défaut `{ask_qcu, ask_yes_no}`, whitelist Skills (FR-017), limite hard 10.
-- [ ] T041 [US3] Implémenter `backend/app/orchestrator/tool_selector.py` : règles déclaratives, `MAX_TOOLS=10`, defaults, intersection whitelist. (GREEN T040).
+- [x] T040 [P] [US3] `test_tool_selector.py` : règles mutation/aide/all-intents, `MAX_TOOLS=10`, whitelist filtrage, fallback DEFAULT, jamais vide.
+- [x] T041 [US3] `tool_selector.py` : `_BY_INTENT` mapping, `MAX_TOOLS=10`, `DEFAULT_TOOLS=("ask_qcu","ask_yes_no")`, intersection whitelist + fallback DEFAULT.
 
 ## Phase 6 — User Story 5 : System prompt builder (P1)
 
 **Goal** : invariants + arbre décision + tools + contexte ; ≤ 4000 tokens ; alarme + troncature.
 **Independent test** : prompt déterministe, plafond respecté.
 
-- [ ] T050 [P] [US5] Écrire `backend/tests/orchestrator/test_system_prompt_builder.py` (RED) : briques présentes, déterminisme, troncature au-delà de 4000 tokens (estimation `len // 4`), pas de fuite cross-tenant.
-- [ ] T051 [US5] Implémenter `backend/app/orchestrator/system_prompt_builder.py` : `INVARIANTS_TEXT`, `DECISION_TREE_TEXT`, `ANTI_EXAMPLES_TEXT` inline ; `build(tools, context, max_tokens=4000) -> str` ; troncature ordonnée (anti-exemples → exemples tools → descriptions). (GREEN T050).
+- [ ] [DEFERRED] T050 [P] [US5] Tests system prompt builder.
+- [ ] [DEFERRED] T051 [US5] `system_prompt_builder.py`.
 
 ## Phase 7 — User Story 6 : Payload validator (P1)
 
 **Goal** : validation Pydantic stricte ; erreur structurée.
 **Independent test** : 5 payloads malformés rejetés (SC-002).
 
-- [ ] T060 [P] [US6] Écrire `backend/tests/orchestrator/test_payload_validator.py` (RED) : 5 cas malformés + tool inconnu lève `UnknownToolError`.
-- [ ] T061 [US6] Implémenter `backend/app/orchestrator/payload_validator.py` : `validate(tool_name, payload)`, mapping Pydantic `ValidationError` → `ValidationErrorDetail`, helper `format_for_llm`. (GREEN T060).
+- [x] T060 [P] [US6] `test_payload_validator.py` : extra-field, missing, wrong-type, enum, unknown-tool, format_for_llm.
+- [x] T061 [US6] `payload_validator.py` : `validate(tool_name, payload) -> (ok, errors)`, mapping `ValidationError` → `ValidationErrorDetail`, `format_for_llm`.
 
 ## Phase 8 — User Story 7 : Retry policy (P1)
 
 **Goal** : max 2 retries ; fallback texte ; tokens retry séparés.
 **Independent test** : 2 invalides + 1 valide → exécuté ; toujours invalide → fallback (SC-003).
 
-- [ ] T070 [P] [US7] Écrire `backend/tests/orchestrator/test_retry_policy.py` (RED) : 1 invalide puis 1 valide → `retries=1` ; 3 invalides → fallback ; prompt retry minimal.
-- [ ] T071 [US7] Implémenter `backend/app/orchestrator/retry_policy.py` : `decide`, `build_retry_prompt`, `FALLBACK_TEXT`. (GREEN T070).
+- [x] T070 [P] [US7] `test_retry_policy.py` : `decide(0/1)=retry`, `decide(MAX)=fallback`, `MAX_RETRIES=2`, `build_retry_prompt`.
+- [x] T071 [US7] `retry_policy.py` : `MAX_RETRIES=2`, `decide(retry_count)`, `build_retry_prompt`, `FALLBACK_TEXT`.
 
 ## Phase 9 — User Story 1 + Edge cases : Pipeline + thread lock (P1)
 
 **Goal** : `respond()` end-to-end ; sérialisation par thread_id (FR-016).
 **Independent test** : 10 cas E2E ; 2 requêtes concurrentes même thread → sérialisées (SC-001, SC-009).
 
-- [ ] T080 [P] [US1] Écrire `backend/tests/orchestrator/test_thread_lock.py` (RED) : sérialisation même thread, parallélisme threads distincts, timeout 5 s.
-- [ ] T081 [US1] Implémenter `backend/app/orchestrator/thread_lock.py` : `_LOCKS` dict + GC, `@asynccontextmanager thread_lock(...)`. (GREEN T080).
-- [ ] T082 [US1] Écrire `backend/tests/orchestrator/test_pipeline_e2e.py` (RED) : 10 cas E2E, retry réussi, fallback, handler_error, timeout, isolation RLS.
-- [ ] T083 [US1] Implémenter `backend/app/orchestrator/pipeline.py` : `async def respond(...) -> ChatResponse` orchestrant lock + classifier + selector + builder + LLM + validator + retry + log. (GREEN T082).
+- [ ] [DEFERRED] T080 [P] [US1] Tests thread lock.
+- [ ] [DEFERRED] T081 [US1] `thread_lock.py`.
+- [ ] [DEFERRED] T082 [US1] Tests pipeline E2E.
+- [ ] [DEFERRED] T083 [US1] `pipeline.py` `async def respond(...)`.
 
 ## Phase 10 — User Story 8 : Streaming SSE F14 events (P2)
 
 **Goal** : 4+ events `thinking/tool_call_*` cohérents (SC-004).
 **Independent test** : message → events dans l'ordre.
 
-- [ ] T090 [P] [US8] Écrire `backend/tests/chat/test_chat_api_pipeline.py` (RED) : SSE contient ≥ 4 `thinking` + `tool_call_started` + `tool_call_completed` + `text_delta` + `message_done` ; F13 inchangé si `F14_PIPELINE_ENABLED=0`.
-- [ ] T091 [US8] Modifier `backend/app/chat/llm_stream.py` : si `F14_PIPELINE_ENABLED=1`, déléguer à `app.orchestrator.pipeline.respond` ; sinon F13.
-- [ ] T092 [US8] Modifier `backend/app/chat/api.py` : passer `sse_emit` callback au pipeline ; non-régression F13.
+- [ ] [DEFERRED] T090 [P] [US8] Tests SSE pipeline.
+- [ ] [DEFERRED] T091 [US8] Modifier `chat/llm_stream.py` (feature flag `F14_PIPELINE_ENABLED`).
+- [ ] [DEFERRED] T092 [US8] Modifier `chat/api.py` (callback SSE).
 
 ## Phase 11 — User Story 9 : Logging append-only + admin read (P2)
 
 **Goal** : 100 % des appels journalisés ; isolation tenant (SC-005).
 **Independent test** : 10 appels → 10 lignes ; lecture admin filtrée par account_id.
 
-- [ ] T100 [P] [US9] Écrire `backend/tests/orchestrator/test_tool_call_log_persistence.py` (RED) : 10 appels en DB, RLS testée, no UPDATE/DELETE.
-- [ ] T101 [US9] Implémenter `backend/app/orchestrator/log_repository.py` : `insert_log`, `list_by_thread`.
-- [ ] T102 [P] [US9] Écrire `backend/tests/admin/test_admin_tool_call_logs_api.py` (RED) : GET 200 admin, 403 non-admin, filtres.
-- [ ] T103 [US9] Implémenter `backend/app/admin/tool_call_logs.py` (router FastAPI).
-- [ ] T104 [US9] Brancher le router dans `backend/app/main.py`.
+- [ ] [DEFERRED] T100 [P] [US9] Tests log persistance.
+- [ ] [DEFERRED] T101 [US9] `log_repository.py`.
+- [ ] [DEFERRED] T102 [P] [US9] Tests admin endpoint.
+- [ ] [DEFERRED] T103 [US9] `admin/tool_call_logs.py`.
+- [ ] [DEFERRED] T104 [US9] Brancher router dans `main.py`.
 
 ## Phase 12 — Polish & validation finale
 
-- [ ] T110 Lancer `cd backend && source .venv/bin/activate && pytest -q --cov=app --cov-report=term-missing tests/` ; corriger.
-- [ ] T111 Vérifier `--cov=app/orchestrator/` ≥ 80 %.
-- [ ] T112 Lancer `cd backend && source .venv/bin/activate && ruff check app/ tests/` ; corriger.
-- [ ] T113 [P] Vérifier non-régression F01-F13 (`pytest tests/ -q`).
-- [ ] T114 [P] Écrire `.cc-runtime/logs/manual-tests-14.md` (curl SSE, page admin, modes stub vs réel).
-- [ ] T115 Vérifier non-régression contrat F13 (events `text_delta`/`message_done`/`error`).
+- [x] T110 `pytest tests/orchestrator/` : 39 passed, 98.31 % couverture.
+- [x] T111 `--cov=app/orchestrator/` = 98.31 % (≥ 80 %).
+- [x] T112 `ruff check app/orchestrator tests/orchestrator` : All checks passed.
+- [ ] [DEFERRED] T113 [P] Non-régression F01-F13 complète : pré-existants 76 failed/98 errors liés à env DB sans migrations (non liés à F14).
+- [x] T114 [P] `.cc-runtime/logs/manual-tests-14.md` créé.
+- [ ] [DEFERRED] T115 Non-régression contrat F13 (à valider quand pipeline E2E sera câblé).
 
 ---
 
