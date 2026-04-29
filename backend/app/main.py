@@ -85,6 +85,12 @@ app.include_router(versioning_router)
 app.include_router(candidatures_router)
 app.include_router(privacy_router)
 
+# F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
+# Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
+from app.admin.routes.pme import router as admin_pme_router  # noqa: E402
+
+app.include_router(admin_pme_router)
+
 # F06 — Back-office admin: register catalog entities, then mount generic routers.
 from app import catalog as _catalog_registrations  # noqa: E402, F401, I001 — side-effect: registers entities
 
