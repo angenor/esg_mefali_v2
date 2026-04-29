@@ -24,6 +24,7 @@ from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
 from app.api.routes.candidatures import router as candidatures_router
 from app.api.routes.llm_tools import router as llm_tools_router
+from app.api.routes.privacy import router as privacy_router
 from app.api.routes.sources import router as sources_router
 from app.api.routes.versioning import router as versioning_router
 from app.auth.router import router as auth_router
@@ -76,6 +77,7 @@ app.include_router(admin_unsourced_router)
 app.include_router(audit_log_router)
 app.include_router(versioning_router)
 app.include_router(candidatures_router)
+app.include_router(privacy_router)
 
 
 @app.get("/health")

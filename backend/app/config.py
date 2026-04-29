@@ -64,6 +64,12 @@ class Settings(BaseSettings):
     # --- Speech-to-text (utilisé en F22) ---
     REPLICATE_API_TOKEN: str = Field(..., min_length=1)
 
+    # --- F05 (data privacy & FX) ---
+    EXCHANGERATE_API_KEY: str = ""
+    PURGE_PSEUDONYM_PEPPER: str = ""
+    FX_DEFAULT_DISPLAY_CURRENCY: str = "XOF"
+    FX_STALE_ALERT_DAYS: int = 7
+
     @property
     def database_url(self) -> str:
         """URL SQLAlchemy/psycopg pour PostgreSQL."""
