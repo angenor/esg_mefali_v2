@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import text
@@ -21,20 +22,30 @@ def test_publish_atomic_close_and_open(db_engine) -> None:
     Session = sessionmaker(bind=db_engine)
     with Session() as db:
         # Seed first row directly.
+        code = f"PUB_A_{uuid4().hex[:6].upper()}"
         result = db.execute(
             text(
-                "INSERT INTO indicateur (id, name, valid_from) "
-                "VALUES (gen_random_uuid(), 'Indic1', now()) "
+                "INSERT INTO indicateur (id, code, name, pillar, valid_from) "
+                "VALUES (gen_random_uuid(), :code, 'Indic1', 'E', now()) "
                 "RETURNING id, logical_id"
-            )
+            ),
+            {"code": code},
         ).mappings().first()
         logical_id = result["logical_id"]
 
+        # Close the v1 row by status to avoid partial unique conflict on code.
+        db.execute(
+            text(
+                "UPDATE indicateur SET status='outdated' WHERE id = :id"
+            ),
+            {"id": result["id"]},
+        )
+        code2 = code + "_V2"
         new_row = publish_new_version(
             db,
             table="indicateur",
             logical_id=logical_id,
-            new_payload={"name": "Indic2"},
+            new_payload={"name": "Indic2", "code": code2, "pillar": "E"},
             version_at_load=1,
         )
         assert new_row["version"] == 2
@@ -54,11 +65,13 @@ def test_publish_optimistic_lock(db_engine) -> None:
 
     Session = sessionmaker(bind=db_engine)
     with Session() as db:
+        code = f"PUB_B_{uuid4().hex[:6].upper()}"
         seed = db.execute(
             text(
-                "INSERT INTO indicateur (id, name) "
-                "VALUES (gen_random_uuid(), 'X') RETURNING logical_id"
-            )
+                "INSERT INTO indicateur (id, code, name, pillar) "
+                "VALUES (gen_random_uuid(), :code, 'X', 'E') RETURNING logical_id"
+            ),
+            {"code": code},
         ).mappings().first()
         with pytest.raises(OptimisticLockError):
             publish_new_version(
@@ -77,11 +90,13 @@ def test_get_active_returns_correct_window(db_engine) -> None:
 
     Session = sessionmaker(bind=db_engine)
     with Session() as db:
+        code = f"PUB_C_{uuid4().hex[:6].upper()}"
         seed = db.execute(
             text(
-                "INSERT INTO indicateur (id, name) "
-                "VALUES (gen_random_uuid(), 'A') RETURNING logical_id"
-            )
+                "INSERT INTO indicateur (id, code, name, pillar) "
+                "VALUES (gen_random_uuid(), :code, 'A', 'E') RETURNING logical_id"
+            ),
+            {"code": code},
         ).mappings().first()
         active = get_active(db, table="indicateur", logical_id=seed["logical_id"])
         assert active is not None
@@ -115,21 +130,34 @@ def test_chain_of_publishes_no_overlap(db_engine) -> None:
 
     Session = sessionmaker(bind=db_engine)
     with Session() as db:
+        code = f"PUB_D_{uuid4().hex[:6].upper()}"
         seed = db.execute(
             text(
-                "INSERT INTO indicateur (id, name) "
-                "VALUES (gen_random_uuid(), 'C0') RETURNING logical_id"
-            )
+                "INSERT INTO indicateur (id, code, name, pillar) "
+                "VALUES (gen_random_uuid(), :code, 'C0', 'E') RETURNING logical_id"
+            ),
+            {"code": code},
         ).mappings().first()
         logical_id = seed["logical_id"]
 
         v = 1
+        # Mark v1 as outdated to bypass partial unique on code.
+        db.execute(
+            text("UPDATE indicateur SET status='outdated' WHERE logical_id = CAST(:lid AS UUID)"),
+            {"lid": str(logical_id)},
+        )
         for i in range(5):
+            new_code = f"{code}_V{i + 2}"
             row = publish_new_version(
                 db,
                 table="indicateur",
                 logical_id=logical_id,
-                new_payload={"name": f"C{i + 1}"},
+                new_payload={
+                    "name": f"C{i + 1}",
+                    "code": new_code,
+                    "pillar": "E",
+                    "status": "outdated",  # avoid partial unique conflict
+                },
                 version_at_load=v,
             )
             v = row["version"]

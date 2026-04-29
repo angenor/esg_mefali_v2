@@ -106,6 +106,7 @@ class TestSourceLifecycle:
         captured_by, verifier = two_admins
         engine = get_engine_migrator()
         with engine.begin() as conn:
+            conn.execute(text("SET LOCAL app.is_admin = 'true'"))
             sid_pending = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
@@ -124,16 +125,27 @@ class TestSourceLifecycle:
                 conn, source_id=sid_verified, verifier_id=verifier,
                 embedding_func=_stub_embedding,
             )
-            # Insère 2 indicateurs
+            # Insère 2 indicateurs (F09 : sources via junction).
             ind_pending = uuid.uuid4()
             ind_verified = uuid.uuid4()
             for iid, sid in ((ind_pending, sid_pending), (ind_verified, sid_verified)):
                 conn.execute(
                     text(
-                        "INSERT INTO indicateur (id, name, source_id) "
-                        "VALUES (:id, :n, :sid)"
+                        "INSERT INTO indicateur (id, code, name, pillar) "
+                        "VALUES (:id, :code, :n, 'E')"
                     ),
-                    {"id": str(iid), "n": f"ind_{iid.hex[:6]}", "sid": str(sid)},
+                    {
+                        "id": str(iid),
+                        "code": f"LIFE_{iid.hex[:8].upper()}",
+                        "n": f"ind_{iid.hex[:6]}",
+                    },
+                )
+                conn.execute(
+                    text(
+                        "INSERT INTO indicateur_source(indicateur_id, source_id) "
+                        "VALUES (:i, :s)"
+                    ),
+                    {"i": str(iid), "s": str(sid)},
                 )
             visible = {
                 r[0]
@@ -155,6 +167,7 @@ class TestSourceLifecycle:
         captured_by, _ = two_admins
         engine = get_engine_migrator()
         with engine.begin() as conn:
+            conn.execute(text("SET LOCAL app.is_admin = 'true'"))
             sid = source_service.create_pending(
                 conn,
                 captured_by=captured_by,
@@ -165,10 +178,21 @@ class TestSourceLifecycle:
             iid = uuid.uuid4()
             conn.execute(
                 text(
-                    "INSERT INTO indicateur (id, name, source_id) "
-                    "VALUES (:id, :n, :sid)"
+                    "INSERT INTO indicateur (id, code, name, pillar) "
+                    "VALUES (:id, :code, :n, 'E')"
                 ),
-                {"id": str(iid), "n": f"ind_{iid.hex[:6]}", "sid": str(sid)},
+                {
+                    "id": str(iid),
+                    "code": f"REST_{iid.hex[:8].upper()}",
+                    "n": f"ind_{iid.hex[:6]}",
+                },
+            )
+            conn.execute(
+                text(
+                    "INSERT INTO indicateur_source(indicateur_id, source_id) "
+                    "VALUES (:i, :s)"
+                ),
+                {"i": str(iid), "s": str(sid)},
             )
         # Note : F01 a posé `source_id UUID NULL REFERENCES source(id)` SANS ON DELETE RESTRICT.
         # On vérifie au moins que la FK existe et bloque la suppression d'une source liée.

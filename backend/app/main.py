@@ -107,6 +107,20 @@ app.include_router(f08_inter_router)
 app.include_router(f08_acc_router)
 app.include_router(f08_offres_router)
 
+# F09 — Catalog admin routers (Indicateur, Referentiel, Critere, DocumentRequis,
+# FacteurEmission). Mounted before generic crud_router to avoid wildcard match.
+from app.catalog.criteres.router import router as f09_criteres_router  # noqa: E402
+from app.catalog.documents_requis.router import router as f09_documents_router  # noqa: E402
+from app.catalog.facteurs_emission.router import router as f09_facteurs_router  # noqa: E402
+from app.catalog.indicateurs.router import router as f09_indicateurs_router  # noqa: E402
+from app.catalog.referentiels.router import router as f09_referentiels_router  # noqa: E402
+
+app.include_router(f09_indicateurs_router)
+app.include_router(f09_referentiels_router)
+app.include_router(f09_criteres_router)
+app.include_router(f09_documents_router)
+app.include_router(f09_facteurs_router)
+
 app.include_router(admin_publish_router)
 app.include_router(admin_crud_router)
 
