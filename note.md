@@ -12,3 +12,8 @@ Désolé pour ce souci d'affichage. Voici l'essentiel en bref :
 - Pour les comptes Enterprise, un administrateur doit d'abord l'activer dans les paramètres de l'organisation
 
 Dites-moi si vous voyez bien ce message, et si vous souhaitez que je vous aide à accéder à claude.ai/design.
+
+
+kill $(cat /tmp/caffeinate.pid) 2>/dev/null
+# ou
+pkill caffeinate
