@@ -1,0 +1,27 @@
+# Claude Code agent folder (peut contenir credentials/tokens)
+.claude/settings.local.json
+.claude/.credentials*
+.claude/cache/
+.claude/logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Environnement
+.env
+.env.local
+.env.*.local
+
+# Dépendances (à adapter selon stack choisie ensuite)
+node_modules/
+__pycache__/
+*.pyc
+venv/
+.venv/
