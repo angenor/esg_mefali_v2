@@ -1,0 +1,65 @@
+openapi: 3.1.0
+info: { title: F08 — Admin Intermédiaires API, version: 0.1.0 }
+servers: [{ url: /admin }]
+security: [{ BearerAdmin: [] }]
+paths:
+  /intermediaires:
+    get:
+      summary: Liste paginée + filtres
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: pays, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntermediaireCreate' } } } }
+      responses: { '201': { description: Created } }
+  /intermediaires/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      responses: { '200': { description: OK }, '404': { description: Not Found } }
+    put:
+      parameters: [{ name: If-Match, in: header, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/IntermediaireUpdate' } } } }
+      responses: { '200': { description: OK }, '412': { description: ETag mismatch } }
+    delete:
+      parameters: [{ name: If-Match, in: header, required: true, schema: { type: string } }]
+      responses: { '204': { description: Soft-deleted }, '409': { description: Referenced } }
+  /intermediaires/{id}/publish:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }, { name: If-Match, in: header, required: true, schema: { type: string } }]
+    post:
+      responses: { '200': { description: Published }, '409': { description: publish_gate_failed } }
+  /intermediaires/{id}/fonds:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get:
+      summary: FR-007 Fonds pour lesquels cet Intermédiaire est accrédité (réciproque)
+      responses: { '200': { description: OK } }
+components:
+  securitySchemes: { BearerAdmin: { type: http, scheme: bearer } }
+  schemas:
+    Intermediaire:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [DAE, NIE, RIE, MIE, banque_locale, dev_carbone, agence_nationale, agence_implem] }
+        pays: { type: array, items: { type: string } }
+        zone_op: { type: string, nullable: true }
+        contact_json: { type: object, nullable: true }
+        frais_json: { type: object }
+        delais_json: { type: object }
+        criteres_json: { type: array }
+        documents_requis_json: { type: array }
+        referentiel_id: { type: string, format: uuid, nullable: true }
+        portail_url: { type: string, nullable: true }
+        track_record_json: { type: object, nullable: true }
+        source_ids: { type: array, items: { type: string, format: uuid } }
+        version: { type: integer }
+        status: { type: string, enum: [draft, published, archived] }
+        etag: { type: string }
+    IntermediaireCreate: { allOf: [{ $ref: '#/components/schemas/Intermediaire' }] }
+    IntermediaireUpdate: { allOf: [{ $ref: '#/components/schemas/Intermediaire' }] }

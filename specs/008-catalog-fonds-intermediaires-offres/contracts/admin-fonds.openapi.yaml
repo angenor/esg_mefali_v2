@@ -1,0 +1,178 @@
+openapi: 3.1.0
+info:
+  title: F08 — Admin Fonds API
+  version: 0.1.0
+  description: |
+    CRUD admin pour les Fonds source. Réutilise crud_router générique F06,
+    publish gate F06 (au moins 1 source verified), audit_log F04, ETag/If-Match.
+servers:
+  - url: /admin
+security:
+  - BearerAdmin: []
+paths:
+  /fonds:
+    get:
+      summary: Liste paginée + filtres + recherche trigram
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [draft, published, archived] } }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: thematique, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string }, description: trigram search on name/organisation }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        '200':
+          description: Liste paginée
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FondsList' }
+    post:
+      summary: Create draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FondsCreate' }
+      responses:
+        '201':
+          description: Created
+          headers:
+            ETag: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Fonds' }
+  /fonds/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      responses:
+        '200':
+          description: OK
+          headers: { ETag: { schema: { type: string } } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Fonds' }
+        '404': { description: Not found }
+    put:
+      parameters:
+        - { name: If-Match, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FondsUpdate' }
+      responses:
+        '200':
+          description: Updated, version+1
+          headers: { ETag: { schema: { type: string } } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Fonds' }
+        '412': { description: Precondition Failed (ETag mismatch) }
+    delete:
+      parameters:
+        - { name: If-Match, in: header, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Soft-deleted (status=archived) }
+        '409': { description: Referenced by accreditation/offre }
+  /fonds/{id}/publish:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: If-Match, in: header, required: true, schema: { type: string } }
+    post:
+      summary: Publish gate (au moins 1 source verified)
+      responses:
+        '200': { description: Published }
+        '409': { description: publish_gate_failed (no verified source) }
+  /fonds/{id}/intermediaires:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: FR-006 Intermédiaires accrédités actifs avec offres dérivées
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    intermediaire: { $ref: '#/components/schemas/Intermediaire' }
+                    accreditation: { $ref: '#/components/schemas/Accreditation' }
+                    offres: { type: array, items: { $ref: '#/components/schemas/OffreSummary' } }
+components:
+  securitySchemes:
+    BearerAdmin: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: { type: string, description: Decimal }
+        currency: { type: string, enum: [XOF, EUR, USD, GBP] }
+    Critere:
+      type: object
+      additionalProperties: false
+      required: [key, operator, value, source_id]
+      properties:
+        key: { type: string }
+        operator: { type: string, enum: [eq, min, max, in, not_in, contains] }
+        value: {}
+        unit: { type: string, nullable: true }
+        source_id: { type: string, format: uuid }
+    Document:
+      type: object
+      additionalProperties: false
+      required: [document_id, label, type]
+      properties:
+        document_id: { type: string }
+        label: { type: string }
+        type: { type: string, enum: [identite, financier, technique, esg, juridique, autre] }
+        required: { type: boolean, default: true }
+        source_id: { type: string, format: uuid, nullable: true }
+    Fonds:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        organisation: { type: string }
+        type: { type: string, enum: [multilateral, bilateral, regional, national, prive] }
+        thematique: { type: array, items: { type: string } }
+        instruments: { type: array, items: { type: string } }
+        plafond_money: { $ref: '#/components/schemas/Money', nullable: true }
+        plancher_money: { $ref: '#/components/schemas/Money', nullable: true }
+        eligibilite_geo: { type: array, items: { type: string } }
+        submission_mode: { type: string, enum: [rolling, call_for_proposals] }
+        deadline: { type: string, format: date-time, nullable: true }
+        referentiel_id: { type: string, format: uuid, nullable: true }
+        criteres_json: { type: array, items: { $ref: '#/components/schemas/Critere' } }
+        documents_requis_json: { type: array, items: { $ref: '#/components/schemas/Document' } }
+        frais_json: { type: object }
+        delais_json: { type: object }
+        site_url: { type: string, nullable: true }
+        contact_json: { type: object, nullable: true }
+        source_ids: { type: array, items: { type: string, format: uuid } }
+        version: { type: integer }
+        status: { type: string, enum: [draft, published, archived] }
+        etag: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    FondsCreate:
+      allOf:
+        - $ref: '#/components/schemas/Fonds'
+      required: [name, organisation, type, thematique, instruments, eligibilite_geo, submission_mode, criteres_json, documents_requis_json, frais_json, delais_json, source_ids]
+    FondsUpdate: { $ref: '#/components/schemas/FondsCreate' }
+    FondsList:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Fonds' } }
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+    Intermediaire: { type: object }
+    Accreditation: { type: object }
+    OffreSummary: { type: object }

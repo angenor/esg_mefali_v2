@@ -1,0 +1,61 @@
+openapi: 3.1.0
+info: { title: F08 — Admin Accreditations API, version: 0.1.0 }
+servers: [{ url: /admin }]
+security: [{ BearerAdmin: [] }]
+paths:
+  /accreditations:
+    get:
+      parameters:
+        - { name: intermediaire_id, in: query, schema: { type: string, format: uuid } }
+        - { name: fonds_id, in: query, schema: { type: string, format: uuid } }
+        - { name: active_at, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses: { '200': { description: OK } }
+    post:
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccreditationCreate' } } } }
+      responses: { '201': { description: Created }, '409': { description: source_not_verified } }
+  /accreditations/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { responses: { '200': { description: OK } } }
+    put:
+      parameters: [{ name: If-Match, in: header, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AccreditationCreate' } } } }
+      responses: { '200': { description: OK }, '412': { description: ETag mismatch } }
+    delete:
+      parameters: [{ name: If-Match, in: header, required: true, schema: { type: string } }]
+      responses: { '204': { description: Removed } }
+  /accreditations/{id}/is_active:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: at, in: query, schema: { type: string, format: date-time }, description: defaults to now }
+    get:
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { type: object, properties: { active: { type: boolean }, at: { type: string } } } } }
+components:
+  securitySchemes: { BearerAdmin: { type: http, scheme: bearer } }
+  schemas:
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties: { amount: { type: string }, currency: { type: string, enum: [XOF, EUR, USD, GBP] } }
+    Accreditation:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        intermediaire_id: { type: string, format: uuid }
+        fonds_id: { type: string, format: uuid }
+        valid_from: { type: string, format: date }
+        valid_to: { type: string, format: date, nullable: true }
+        plafond_money: { $ref: '#/components/schemas/Money', nullable: true }
+        source_id: { type: string, format: uuid }
+        notes: { type: string, nullable: true }
+        version: { type: integer }
+        etag: { type: string }
+    AccreditationCreate:
+      allOf: [{ $ref: '#/components/schemas/Accreditation' }]
+      required: [intermediaire_id, fonds_id, valid_from, source_id]
