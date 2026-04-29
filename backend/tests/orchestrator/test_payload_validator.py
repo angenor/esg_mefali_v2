@@ -10,17 +10,23 @@ from app.orchestrator.payload_validator import (
     format_for_llm,
     validate,
 )
+from app.orchestrator.tools import register_response_tools
+
+
+def _register_all() -> None:
+    register_fixture_tools()
+    register_response_tools()
 
 
 def test_validate_valid_payload_returns_ok() -> None:
-    register_fixture_tools()
+    _register_all()
     ok, errors = validate("ask_yes_no", {"question": "Confirmer ?"})
     assert ok is True
     assert errors == []
 
 
 def test_validate_extra_field_rejected() -> None:
-    register_fixture_tools()
+    _register_all()
     ok, errors = validate(
         "ask_yes_no", {"question": "Confirmer ?", "rogue": "x"}
     )
@@ -29,14 +35,15 @@ def test_validate_extra_field_rejected() -> None:
 
 
 def test_validate_missing_field_rejected() -> None:
-    register_fixture_tools()
+    _register_all()
+    # ask_qcu requiert maintenant 'options' (>=2) — rejet attendu sans elles
     ok, errors = validate("ask_qcu", {"question": "X"})
     assert ok is False
-    assert any("choices" in e.field for e in errors)
+    assert any("options" in e.field for e in errors)
 
 
 def test_validate_wrong_type_rejected() -> None:
-    register_fixture_tools()
+    _register_all()
     ok, errors = validate(
         "search_demo_source", {"query": "x", "top_k": "not-an-int"}
     )
@@ -45,7 +52,7 @@ def test_validate_wrong_type_rejected() -> None:
 
 
 def test_validate_enum_violation_rejected() -> None:
-    register_fixture_tools()
+    _register_all()
     ok, errors = validate(
         "update_demo_profile", {"field": "unknown_field", "value": "v"}
     )
@@ -53,7 +60,7 @@ def test_validate_enum_violation_rejected() -> None:
 
 
 def test_validate_unknown_tool_raises() -> None:
-    register_fixture_tools()
+    _register_all()
     with pytest.raises(UnknownToolError):
         validate("does_not_exist", {})
 
@@ -63,8 +70,8 @@ def test_format_for_llm_empty_returns_empty() -> None:
 
 
 def test_format_for_llm_renders_lines() -> None:
-    register_fixture_tools()
+    _register_all()
     _, errors = validate("ask_qcu", {"question": "X"})
     rendered = format_for_llm(errors)
     assert "Validation échouée" in rendered
-    assert "choices" in rendered
+    assert "options" in rendered
