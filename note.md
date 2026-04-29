@@ -1,3 +1,7 @@
+test cette feature avec `agent-browser --headed`
+
+`claude --dangerously-skip-permissions`
+
 Désolé pour ce souci d'affichage. Voici l'essentiel en bref :
 
 **Claude Design** n'est pas un logiciel à télécharger. C'est un outil web intégré à Claude.ai, lancé par Anthropic le 17 avril 2026.

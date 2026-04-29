@@ -1,1 +1,21 @@
 2026-04-29T03:51:49Z | 01-foundations-stack-init | START
+2026-04-29T04:21:06Z | 01-foundations-stack-init | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/1 | manual-tests=.cc-runtime/logs/manual-tests-01.md | coverage=98.06
+2026-04-29T04:23:46Z | 02-auth-roles-rls | START
+2026-04-29T05:13:31Z | 02-auth-roles-rls | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/2 | manual-tests=.cc-runtime/logs/manual-tests-02.md | coverage=86.96 | fixloop=4
+2026-04-29T05:13:31Z | 03-source-anti-hallucination | START
+2026-04-29T05:55:43Z | 03-source-anti-hallucination | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/3 | manual-tests=.cc-runtime/logs/manual-tests-03.md | coverage=87.12 | fixloop=3
+2026-04-29T05:55:43Z | 04-audit-log-versioning | START
+2026-04-29T06:31:26Z | 04-audit-log-versioning | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/4 | manual-tests=.cc-runtime/logs/manual-tests-04.md | coverage=85.08 | fixloop=5
+2026-04-29T06:31:26Z | 05-data-privacy-consents | START
+2026-04-29T07:07:07Z | 05-data-privacy-consents | DONE-PARTIAL | PR=https://github.com/angenor/esg_mefali_v2/pull/5 | manual-tests=.cc-runtime/logs/manual-tests-05.md | coverage=85.35 | scope=foundational+US2+US7 | deferred=US1,US3,US4,US5,US6,Polish
+2026-04-29T07:07:07Z | 06-back-office-skeleton | START
+2026-04-29T07:36:58Z | 06-back-office-skeleton | DONE-PARTIAL | PR=https://github.com/angenor/esg_mefali_v2/pull/6 | manual-tests=.cc-runtime/logs/manual-tests-06.md | coverage=86.53 | scope=backend-complet | deferred=frontend-vue
+2026-04-29T07:36:58Z | 07-catalog-sources-management | START
+2026-04-29T08:12:13Z | 07-catalog-sources-management | DONE-PARTIAL | PR=https://github.com/angenor/esg_mefali_v2/pull/7 | manual-tests=.cc-runtime/logs/manual-tests-07.md | coverage=86.56 | scope=US1-backend | deferred=US2-US6+frontend
+2026-04-29T08:12:13Z | 08-catalog-fonds-intermediaires-offres | START
+2026-04-29T09:11:56Z | 08-catalog-fonds-intermediaires-offres | DONE-PARTIAL | PR=https://github.com/angenor/esg_mefali_v2/pull/8 | manual-tests=.cc-runtime/logs/manual-tests-08.md | coverage=85.19 | scope=backend-MVP-Phases1-6 | deferred=frontend+hooks+catalog-public+polish
+2026-04-29T09:11:56Z | 09-catalog-referentiels-indicateurs | START
+2026-04-29T10:08:32Z | 09-catalog-referentiels-indicateurs | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/9 | manual-tests=.cc-runtime/logs/manual-tests-09.md | coverage=83.08 | scope=backend-full
+2026-04-29T10:08:32Z | 10-admin-support-pme-metrics | START
+2026-04-29T10:37:56Z | 10-admin-support-pme-metrics | DONE-PARTIAL | PR=https://github.com/angenor/esg_mefali_v2/pull/10 | manual-tests=.cc-runtime/logs/manual-tests-10.md | coverage=83.56 | scope=US1-US2-backend | deferred=US3-US6+frontend
+2026-04-29T10:37:56Z | PAUSE | utilisateur demande arrêt après F10 pour tests manuels
