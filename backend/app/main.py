@@ -132,6 +132,11 @@ from app.admin.routes.pme import router as admin_pme_router  # noqa: E402
 
 app.include_router(admin_pme_router)
 
+# F30 — Attestation verifiable (PME + admin + public).
+from app.attestations.router import router as attestation_router  # noqa: E402
+
+app.include_router(attestation_router)
+
 # F06 — Back-office admin: register catalog entities, then mount generic routers.
 from app import catalog as _catalog_registrations  # noqa: E402, F401, I001 — side-effect: registers entities
 
