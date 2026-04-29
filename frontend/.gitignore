@@ -1,0 +1,12 @@
+node_modules/
+.nuxt/
+.output/
+.nitro/
+.cache/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+coverage/
