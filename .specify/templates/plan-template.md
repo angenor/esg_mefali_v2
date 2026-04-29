@@ -31,7 +31,36 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Reference: [`.specify/memory/constitution.md`](../../.specify/memory/constitution.md) v1.0.0.
+Mark each gate as ✅ pass / ⚠ deferred / ❌ violated. Any ❌ on a NON
+NEGOTIABLE principle blocks the plan and requires either redesign or a
+constitutional amendment — never a workaround in `Complexity Tracking`.
+
+| # | Principle | Gate question for this feature | Status |
+|---|-----------|--------------------------------|--------|
+| P1 | Sourçage anti-hallucination | Toute donnée factuelle introduite par cette feature pointe-t-elle vers une `Source` `verified` ? Les nouveaux champs catalogue ont-ils `source_id NOT NULL` ? | |
+| P2 | Multi-tenant RLS | Toute nouvelle table métier porte-t-elle `account_id` + politique RLS ? Les accès cross-tenant retournent-ils 404 ? | |
+| P3 | Audit log append-only | Toute mutation introduite est-elle journalisée avec `source_of_change` ∈ {manual, llm, import, admin} ? | |
+| P4 | Versioning + snapshot candidatures | Les nouveaux référentiels/critères/formules portent-ils `version`, `valid_from`, `valid_to` ? Les candidatures stockent-elles un `snapshot_json` immuable ? | |
+| P5 | Money typé | Toute valeur monétaire utilise-t-elle `Money = {amount: Decimal, currency}` ? Le risque de change est-il rendu explicite ? | |
+| P6 | Pivot Indicateur unique | Les données ESG sont-elles stockées comme valeurs d'`Indicateur` (pas par axe E/S/G ni dupliquées par référentiel) ? | |
+| P7 | Plateforme fermée aux intermédiaires | La feature évite-t-elle tout rôle utilisateur Intermédiaire/Bank/Fund ? Les sorties externes passent-elles par attestation Ed25519 + QR ? | |
+| P8 | Édition manuelle + sync LLM | Tout champ alimenté par le LLM est-il modifiable manuellement ? La mutation manuelle invalide-t-elle le contexte LLM en temps réel ? | |
+| P9 | Tool-use LLM fiable | Nouveaux tools : nom verbal, "use when / don't use when", schéma Pydantic strict (`extra='forbid'`), ≤ 10 tools concurrents par tour, eval gating planifié ? | |
+| P10 | UX bottom sheet | Les composants interactifs vivent-ils dans le bottom sheet (jamais inline dans la bulle LLM) ? Bouton "Répondre librement" présent ? | |
+
+### Contraintes techniques (rappel)
+
+- Stack imposée : Nuxt 4 + FastAPI + PostgreSQL/pgvector ; LLM via
+  OpenRouter (interchangeable par env) ; embeddings Voyage `voyage-3.5`
+  (1024 dim).
+- Dev local : backend en `.venv`, Postgres seul service dockerisé,
+  frontend en `pnpm dev`.
+- Hébergement production : Europe ou Afrique de l'Ouest uniquement
+  (jamais USA).
+- Conformité : RGPD + loi ivoirienne 2013-450 + UEMOA 20/2010 dès le MVP.
+- Langue : français par défaut ; anglais uniquement pour dossiers vers
+  offres `accepted_languages = 'en'`.
 
 ## Project Structure
 
