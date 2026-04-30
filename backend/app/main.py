@@ -24,6 +24,7 @@ from app.admin.publish import router as admin_publish_router
 from app.admin.router import router as admin_router
 from app.admin.search import router as admin_search_router
 from app.admin.stats import router as admin_stats_router
+from app.api.routes.admin_llm_eval import router as admin_llm_eval_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
 from app.api.routes.candidatures import router as candidatures_router
@@ -83,6 +84,7 @@ app.include_router(sources_router)
 app.include_router(catalog_sources_router)
 app.include_router(llm_tools_router)
 app.include_router(admin_unsourced_router)
+app.include_router(admin_llm_eval_router)
 app.include_router(audit_log_router)
 app.include_router(versioning_router)
 app.include_router(candidatures_router)
