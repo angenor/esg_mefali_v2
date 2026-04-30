@@ -223,6 +223,17 @@ from app.extension.router import router as extension_router  # noqa: E402
 app.include_router(extension_router)
 app.include_router(extension_admin_router)
 
+# F34 — Suivi candidatures PME + centre de notifications + recommandations.
+from app.candidatures.router import (  # noqa: E402
+    router as f34_me_candidatures_router,
+)
+from app.notifications.router import (  # noqa: E402
+    router as f34_notifications_router,
+)
+
+app.include_router(f34_me_candidatures_router)
+app.include_router(f34_notifications_router)
+
 
 @app.get("/health")
 def health() -> Any:

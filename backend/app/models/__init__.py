@@ -25,6 +25,7 @@ from app.models.credit_score import CreditScore  # noqa: E402,F401
 from app.models.field_mapping_intermediaire import (  # noqa: E402,F401
     FieldMappingIntermediaire,
 )
+from app.models.notification import Notification  # noqa: E402,F401
 from app.models.password_reset_token import PasswordResetToken  # noqa: E402,F401
 from app.models.refresh_token import RefreshToken  # noqa: E402,F401
 from app.models.skill import Skill, SkillSource  # noqa: E402,F401
@@ -43,6 +44,7 @@ __all__ = [
     "CreditData",
     "CreditScore",
     "FieldMappingIntermediaire",
+    "Notification",
     "PasswordResetToken",
     "RefreshToken",
     "Skill",
