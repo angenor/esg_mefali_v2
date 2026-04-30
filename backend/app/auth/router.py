@@ -6,6 +6,7 @@ T024, T035, T036, T055, T059.
 
 from __future__ import annotations
 
+import os
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, status
@@ -96,7 +97,7 @@ def register(
     body: Annotated[RegisterIn, Body()],
     db: Session = Depends(get_db),
 ) -> MeOut:
-    _check_rate(request, "register", "10/hour")
+    _check_rate(request, "register", os.environ.get("AUTH_REGISTER_RATE", "10/hour"))
     try:
         issued = auth_service.register_pme(
             db, email=body.email, password=body.password

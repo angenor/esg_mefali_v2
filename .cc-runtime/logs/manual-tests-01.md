@@ -10,12 +10,12 @@ Cocher après vérification.
 
 ## UI / Frontend
 
-- [ ] T021 — Ouvrir http://localhost:3000, vérifier que le statut "Backend OK" (vert) ou "Backend indisponible" (rouge) est affiché en français.
-- [ ] T057 — Smoke test E2E : depuis poste vierge avec backend up, ouvrir http://localhost:3000 et chronométrer l'affichage du statut (< 3 s, SC-004).
+- [x] T021 — http://localhost:3001 → "Backend OK" affiché en français quand backend up ; bascule en "Backend indisponible" quand `docker compose stop postgres`. ✅ 2026-04-30 agent-browser.
+- [ ] T057 — Smoke test E2E chronométré (< 3 s) — non chronométré explicitement, mais affichage observé sous 2 s lors du test T021.
 
 ## Health check sous tension
 
-- [ ] SC-003 — `docker compose stop postgres` puis `curl localhost:8000/health` → 503 `{"status":"degraded","db":"unreachable"}`. Re-up puis 200.
+- [x] SC-003 — `docker compose stop postgres` → `curl localhost:8010/health` retourne 503 `{"status":"degraded","db":"unreachable"}` ; après `docker compose up -d postgres` retour à 200 `{"status":"ok","db":"ok"}`. ✅ 2026-04-30.
 
 ## Sécurité / configuration
 

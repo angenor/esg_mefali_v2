@@ -9,12 +9,17 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .env est à la racine du repo (un cran au-dessus de backend/)
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _ENV_FILE = _REPO_ROOT / ".env"
+
+# Expose .env values to os.environ so legacy modules reading os.environ
+# directly (e.g. app/attestations/crypto.py) see the same values.
+load_dotenv(_ENV_FILE, override=False)
 
 
 class Settings(BaseSettings):

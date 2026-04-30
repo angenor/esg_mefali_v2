@@ -9,6 +9,7 @@ const PUBLIC_PATHS = new Set([
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (PUBLIC_PATHS.has(to.path)) return
+  if (import.meta.server) return
 
   const store = useAuthStore()
   if (!store.user) {

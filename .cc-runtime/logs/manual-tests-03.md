@@ -4,7 +4,7 @@ Tâches couvertes par tests automatisés (pytest + vitest) — non listées ici.
 
 ## US4 — Composant SourceCite (UI)
 
-- [ ] T039 — page démo `/demo/source-cite-demo` : `cd frontend && pnpm dev` puis ouvrir `http://localhost:3000/demo/source-cite-demo` ; vérifier visuellement les 3 instances avec picto cliquable
+- [x] T039 — page démo `/demo/source-cite-demo` : ✅ 2026-04-30 agent-browser. Fix appliqué dans `frontend/app/middleware/auth.global.ts` (skip SSR via `if (import.meta.server) return`). 3 instances `<SourceCite>` visibles (verified/pending/outdated) ; clic picto ouvre le bottom sheet "Sources" avec bouton Fermer ; affiche "Failed to fetch" car UUIDs `11111111-...` factices (attendu, conforme commentaire du code).
 - [ ] T041 — E2E Playwright `frontend/tests/e2e/source-cite.spec.ts` (post-MVP) : nécessite que des UUIDs réels soient seedés en DB ; à activer une fois F07 (catalog-sources-management) livré
 - [ ] T038 — animation gsap slide-up : ouvrir bottom sheet et vérifier visuellement la fluidité (gsap pas encore intégré, fallback CSS pour MVP)
 
