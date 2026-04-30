@@ -152,8 +152,12 @@ def generate_attestation(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "invalid_input", "message": str(exc)},
         ) from exc
+    # Build response BEFORE commit: SQLAlchemy expires attrs on commit and
+    # reload would run in a fresh tx without `app.current_account_id`
+    # GUC, so RLS would filter the row out (ObjectDeletedError).
+    out = _to_out(att, settings.APP_URL)
     db.commit()
-    return _to_out(att, settings.APP_URL)
+    return out
 
 
 @router.get("/me/attestations", response_model=list[AttestationOut])
@@ -213,8 +217,12 @@ def revoke_me_attestation(
         actor_id=user.id,
         reason=body.reason,
     )
+    # Build response BEFORE commit: SQLAlchemy expires attrs on commit and
+    # reload would run in a fresh tx without `app.current_account_id`
+    # GUC, so RLS would filter the row out (ObjectDeletedError).
+    out = _to_out(att, settings.APP_URL)
     db.commit()
-    return _to_out(att, settings.APP_URL)
+    return out
 
 
 @router.post(
@@ -231,8 +239,12 @@ def revoke_admin_attestation(
     att = service.revoke_by_admin(
         attestation_id=attestation_id, actor_id=admin.id, reason=body.reason
     )
+    # Build response BEFORE commit: SQLAlchemy expires attrs on commit and
+    # reload would run in a fresh tx without `app.current_account_id`
+    # GUC, so RLS would filter the row out (ObjectDeletedError).
+    out = _to_out(att, settings.APP_URL)
     db.commit()
-    return _to_out(att, settings.APP_URL)
+    return out
 
 
 # ---------- Public endpoints

@@ -55,13 +55,13 @@ imports OK
 - [ ] `python -m app.scripts.generate_attestation_keys` → générer une paire,
       coller `ATTESTATION_PRIVATE_KEY_HEX` dans `.env`.
 - [x] `uvicorn app.main:app --reload` → `curl /verify/_pubkey` retourne la clé. ✅ 2026-04-30 après ajout de `ATTESTATION_PRIVATE_KEY_HEX` dans `.env` + patch `app/config.py` (load_dotenv pour exposer la var à `os.environ`). Pubkey hex `aaccee5b573fac721986bbb6bede75bcf7404875493f5b0fdf1e3252a68ba405`.
-- [ ] PME authentifiée → `POST /me/attestations` avec body
+- [x] PME authentifiée → `POST /me/attestations` avec body
       `entreprise_name`, `scores_to_include=["solvability"]`, `scores_resolved`,
-      `referentiels_versions`.
+      `referentiels_versions`. ✅ 2026-04-30 après fix `app/attestations/router.py` (build response BEFORE commit pour éviter SQLAlchemy `ObjectDeletedError` causé par `expire_on_commit` + RLS sans GUC après commit). Retour 201 avec `id`, `public_id`, `signature_ed25519`, `hash_document`.
 - [ ] Vérification externe via le script Python documenté dans `quickstart.md`.
-- [ ] Page HTML `/verify/{public_id}` rendue dans le navigateur.
-- [ ] `POST /me/attestations/{id}/revoke` → la page publique repasse en
-      `revoked`.
+- [x] Page HTML `/verify/{public_id}` rendue dans le navigateur. ✅ 2026-04-30 agent-browser. Affiche entreprise, statut, dates, scores, hash, signature Ed25519, fingerprint pubkey, lien PDF. Tested public_id `e3e912a3-01ac-4ec4-97ed-31a0ca67b093`.
+- [x] `POST /me/attestations/{id}/revoke` → la page publique repasse en
+      `revoked`. ✅ 2026-04-30 agent-browser. Statut bascule `active` → `revoked` avec timestamp `Revoquee le ...`.
 
 ## Périmètre livré (MVP minimal vert)
 
