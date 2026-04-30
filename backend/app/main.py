@@ -207,6 +207,15 @@ from app.dashboard.router import router as dashboard_router  # noqa: E402
 
 app.include_router(dashboard_router)
 
+# F33 — Extension Chrome : endpoints PME + admin.
+from app.extension.admin_router import (  # noqa: E402
+    router as extension_admin_router,
+)
+from app.extension.router import router as extension_router  # noqa: E402
+
+app.include_router(extension_router)
+app.include_router(extension_admin_router)
+
 
 @app.get("/health")
 def health() -> Any:
