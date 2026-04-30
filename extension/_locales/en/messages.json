@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Detect funds/intermediary websites and AI-prefill forms."
+  },
+  "popupTitle": {"message": "ESG Mefali"},
+  "loginEmail": {"message": "Email"},
+  "loginPassword": {"message": "Password"},
+  "loginButton": {"message": "Sign in"},
+  "logoutButton": {"message": "Sign out"},
+  "refreshPatterns": {"message": "Refresh patterns"},
+  "languageLabel": {"message": "Language"},
+  "loginRequired": {"message": "Sign in to enable personalised pre-fill."},
+  "offerDetected": {"message": "Offer detected"},
+  "fillAll": {"message": "Auto-fill all fields"},
+  "suggest": {"message": "Suggest"},
+  "suggestionUnavailable": {"message": "Suggestion unavailable."},
+  "dismiss": {"message": "Dismiss"}
+}

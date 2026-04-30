@@ -1,0 +1,18 @@
+{
+  "extDescription": {
+    "message": "Détection des sites de fonds/intermédiaires et pré-remplissage IA des formulaires."
+  },
+  "popupTitle": {"message": "ESG Mefali"},
+  "loginEmail": {"message": "Email"},
+  "loginPassword": {"message": "Mot de passe"},
+  "loginButton": {"message": "Se connecter"},
+  "logoutButton": {"message": "Se déconnecter"},
+  "refreshPatterns": {"message": "Rafraîchir les patterns"},
+  "languageLabel": {"message": "Langue"},
+  "loginRequired": {"message": "Connectez-vous pour personnaliser le pré-remplissage."},
+  "offerDetected": {"message": "Offre détectée"},
+  "fillAll": {"message": "Tout remplir automatiquement"},
+  "suggest": {"message": "Suggérer"},
+  "suggestionUnavailable": {"message": "Suggestion non disponible."},
+  "dismiss": {"message": "Fermer"}
+}

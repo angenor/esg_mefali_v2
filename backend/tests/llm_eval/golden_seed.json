@@ -1,0 +1,115 @@
+[
+  {
+    "id": "qcu-forme-juridique",
+    "description": "L'utilisateur ne sait pas comment formaliser le type de societe",
+    "context": {"page": "/profil/entreprise", "intent": "profilage", "entity": null},
+    "user_message": "Quelle est ma forme juridique deja ?",
+    "expected": {
+      "tool": "ask_qcu",
+      "payload_partial": {
+        "options_count_min": 4,
+        "options_contain": ["SARL", "SA"]
+      }
+    },
+    "tags": ["profil", "entreprise", "forme_juridique"]
+  },
+  {
+    "id": "qcm-secteurs",
+    "description": "Multi-selection de secteurs d'activite",
+    "context": {"page": "/profil/entreprise", "intent": "profilage", "entity": null},
+    "user_message": "Dans quels secteurs operez-vous ?",
+    "expected": {
+      "tool": "ask_qcm",
+      "payload_partial": {"options_count_min": 3}
+    },
+    "tags": ["profil", "secteur"]
+  },
+  {
+    "id": "yes-no-rse",
+    "description": "Question fermee oui/non sur politique RSE",
+    "context": {"page": "/diagnostic", "intent": "profilage", "entity": null},
+    "user_message": "Avez-vous une politique RSE formalisee ?",
+    "expected": {
+      "tool": "ask_yes_no",
+      "payload_partial": {}
+    },
+    "tags": ["rse", "diagnostic"]
+  },
+  {
+    "id": "ask-number-effectif",
+    "description": "Saisie d'un nombre",
+    "context": {"page": "/profil/entreprise", "intent": "profilage", "entity": null},
+    "user_message": "Combien d'employes avez-vous ?",
+    "expected": {
+      "tool": "ask_number",
+      "payload_partial": {}
+    },
+    "tags": ["profil", "effectif"]
+  },
+  {
+    "id": "kpi-ca",
+    "description": "Affichage d'un KPI chiffre d'affaires",
+    "context": {"page": "/dashboard", "intent": "analyse", "entity": null},
+    "user_message": "Montre-moi mon chiffre d'affaires",
+    "expected": {
+      "tool": "show_kpi_card",
+      "payload_partial": {"equals": {"label": "Chiffre d'affaires"}}
+    },
+    "tags": ["dashboard", "kpi"]
+  },
+  {
+    "id": "mutation-profil-name",
+    "description": "Mutation du nom de l'entreprise",
+    "context": {"page": "/profil/entreprise", "intent": "mutation", "entity": "entreprise"},
+    "user_message": "Mets a jour mon nom d'entreprise en 'ACME SARL'",
+    "expected": {
+      "tool": "update_entreprise",
+      "payload_partial": {"regex": {"name": "^ACME"}}
+    },
+    "tags": ["mutation", "entreprise"]
+  },
+  {
+    "id": "fallback-aide-libre",
+    "description": "Question ouverte sans tool approprie",
+    "context": {"page": "/chat", "intent": "aide", "entity": null},
+    "user_message": "Explique-moi en 3 lignes ce que fait votre plateforme",
+    "expected": {
+      "tool": "__fallback__",
+      "payload_partial": {}
+    },
+    "tags": ["fallback", "aide"]
+  },
+  {
+    "id": "fallback-divers",
+    "description": "Petite conversation generique",
+    "context": {"page": "/chat", "intent": "autre", "entity": null},
+    "user_message": "Bonjour, comment ca va ?",
+    "expected": {
+      "tool": "__fallback__",
+      "payload_partial": {}
+    },
+    "tags": ["fallback"]
+  },
+  {
+    "id": "viz-empreinte",
+    "description": "Visualisation chart empreinte carbone",
+    "context": {"page": "/empreinte", "intent": "analyse", "entity": null},
+    "user_message": "Affiche l'evolution de mon empreinte carbone",
+    "expected": {
+      "tool": "show_line_chart",
+      "payload_partial": {}
+    },
+    "tags": ["analyse", "carbone"]
+  },
+  {
+    "id": "qcu-banque",
+    "description": "Choix d'une banque cible",
+    "context": {"page": "/financement", "intent": "profilage", "entity": null},
+    "user_message": "Avec quelle banque travaillez-vous principalement ?",
+    "expected": {
+      "tool": "ask_qcu",
+      "payload_partial": {"options_count_min": 2}
+    },
+    "tags": ["financement", "banque"]
+  }
+]

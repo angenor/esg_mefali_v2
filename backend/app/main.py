@@ -24,6 +24,7 @@ from app.admin.publish import router as admin_publish_router
 from app.admin.router import router as admin_router
 from app.admin.search import router as admin_search_router
 from app.admin.stats import router as admin_stats_router
+from app.api.routes.admin_llm_eval import router as admin_llm_eval_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
 from app.api.routes.candidatures import router as candidatures_router
@@ -83,6 +84,7 @@ app.include_router(sources_router)
 app.include_router(catalog_sources_router)
 app.include_router(llm_tools_router)
 app.include_router(admin_unsourced_router)
+app.include_router(admin_llm_eval_router)
 app.include_router(audit_log_router)
 app.include_router(versioning_router)
 app.include_router(candidatures_router)
@@ -114,6 +116,18 @@ from app.dossier.router import router as dossier_router  # noqa: E402
 
 app.include_router(dossier_router)
 
+# F28 — Empreinte carbone (PME).
+from app.carbon.router import router as carbon_router  # noqa: E402
+
+app.include_router(carbon_router)
+
+# F29 — Credit scoring (collecte + algorithme hybride source).
+from app.credit.router import public_router as credit_public_router  # noqa: E402
+from app.credit.router import router as credit_router  # noqa: E402
+
+app.include_router(credit_router)
+app.include_router(credit_public_router)
+
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
@@ -124,6 +138,11 @@ app.include_router(entreprise_documents_router)
 from app.admin.routes.pme import router as admin_pme_router  # noqa: E402
 
 app.include_router(admin_pme_router)
+
+# F30 — Attestation verifiable (PME + admin + public).
+from app.attestations.router import router as attestation_router  # noqa: E402
+
+app.include_router(attestation_router)
 
 # F06 — Back-office admin: register catalog entities, then mount generic routers.
 from app import catalog as _catalog_registrations  # noqa: E402, F401, I001 — side-effect: registers entities
@@ -184,6 +203,25 @@ app.include_router(scoring_router)
 from app.rapports.router import router as rapports_router  # noqa: E402
 
 app.include_router(rapports_router)
+
+# F31 — Plan d'action ESG (PME).
+from app.action_plan.routes import router as action_plan_router  # noqa: E402
+
+app.include_router(action_plan_router)
+
+# F32 — Dashboard PME (agrégat lecture seule + export "Mes données").
+from app.dashboard.router import router as dashboard_router  # noqa: E402
+
+app.include_router(dashboard_router)
+
+# F33 — Extension Chrome : endpoints PME + admin.
+from app.extension.admin_router import (  # noqa: E402
+    router as extension_admin_router,
+)
+from app.extension.router import router as extension_router  # noqa: E402
+
+app.include_router(extension_router)
+app.include_router(extension_admin_router)
 
 
 @app.get("/health")

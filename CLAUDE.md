@@ -1,5 +1,5 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/021-skills-seed-mvp/plan.md
+specs/031-plan-action-rappels-bibliotheque/plan.md
 <!-- SPECKIT END -->

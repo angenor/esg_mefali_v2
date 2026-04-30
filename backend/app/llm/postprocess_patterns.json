@@ -1,0 +1,16 @@
+{
+  "enumeration_patterns": [
+    "(?:^|\\n)\\s*1[\\.\\)]\\s+.+?(?:\\n)\\s*2[\\.\\)]\\s+.+?(?:\\n)\\s*3[\\.\\)]\\s+",
+    "(?:^|\\n)\\s*[-\\*]\\s+.+?(?:\\n)\\s*[-\\*]\\s+.+?(?:\\n)\\s*[-\\*]\\s+"
+  ],
+  "binary_choice_patterns": [
+    "pr[\\u00e9e]f[\\u00e9e]rez-vous\\s+.+?\\s+(?:ou|,)\\s+.+?\\?",
+    "souhaitez-vous\\s+.+?\\s+(?:ou|,)\\s+.+?\\?",
+    "(?:oui|non)\\s+ou\\s+(?:non|oui)\\s*\\?"
+  ],
+  "number_with_unit_patterns": [
+    "\\b\\d{1,3}(?:[\\s\\u00a0\\.,]?\\d{3})*(?:[\\.,]\\d+)?\\s*(?:FCFA|XOF|EUR|USD|tonnes?)\\b",
+    "\\b\\d{1,3}(?:[\\s\\u00a0\\.,]?\\d{3})*(?:[\\.,]\\d+)?\\s*%",
+    "\\b\\d+\\s*pourcent\\b"
+  ]
+}
