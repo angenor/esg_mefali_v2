@@ -202,6 +202,11 @@ from app.action_plan.routes import router as action_plan_router  # noqa: E402
 
 app.include_router(action_plan_router)
 
+# F32 — Dashboard PME (agrégat lecture seule + export "Mes données").
+from app.dashboard.router import router as dashboard_router  # noqa: E402
+
+app.include_router(dashboard_router)
+
 
 @app.get("/health")
 def health() -> Any:
