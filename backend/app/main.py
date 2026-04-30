@@ -111,6 +111,11 @@ from app.simulation.router import router as simulation_router  # noqa: E402
 
 app.include_router(simulation_router)
 
+# F26 — Generateur de dossiers de candidature (PME, MVP stub).
+from app.dossier.router import router as dossier_router  # noqa: E402
+
+app.include_router(dossier_router)
+
 # F28 — Empreinte carbone (PME).
 from app.carbon.router import router as carbon_router  # noqa: E402
 
