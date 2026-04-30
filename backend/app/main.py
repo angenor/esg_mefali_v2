@@ -109,6 +109,11 @@ from app.simulation.router import router as simulation_router  # noqa: E402
 
 app.include_router(simulation_router)
 
+# F26 — Generateur de dossiers de candidature (PME, MVP stub).
+from app.dossier.router import router as dossier_router  # noqa: E402
+
+app.include_router(dossier_router)
+
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
