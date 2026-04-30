@@ -22,11 +22,15 @@ from app.models.attestation import Attestation  # noqa: E402,F401
 from app.models.carbon_footprint import CarbonFootprint  # noqa: E402,F401
 from app.models.credit_data import CreditData  # noqa: E402,F401
 from app.models.credit_score import CreditScore  # noqa: E402,F401
+from app.models.field_mapping_intermediaire import (  # noqa: E402,F401
+    FieldMappingIntermediaire,
+)
 from app.models.password_reset_token import PasswordResetToken  # noqa: E402,F401
 from app.models.refresh_token import RefreshToken  # noqa: E402,F401
 from app.models.skill import Skill, SkillSource  # noqa: E402,F401
 from app.models.source import Source  # noqa: E402,F401
 from app.models.unsourced_claim_log import UnsourcedClaimLog  # noqa: E402,F401
+from app.models.url_pattern import UrlPattern  # noqa: E402,F401
 
 __all__ = [
     "Account",
@@ -38,10 +42,12 @@ __all__ = [
     "CarbonFootprint",
     "CreditData",
     "CreditScore",
+    "FieldMappingIntermediaire",
     "PasswordResetToken",
     "RefreshToken",
     "Skill",
     "SkillSource",
     "Source",
     "UnsourcedClaimLog",
+    "UrlPattern",
 ]
