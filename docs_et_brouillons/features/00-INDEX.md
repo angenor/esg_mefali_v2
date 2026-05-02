@@ -196,6 +196,55 @@ Ces invariants viennent du Module 0 du brainstorming et doivent être respectés
 
 ---
 
+## Phase UI MVP (frontend Nuxt) — features 36 → 52
+
+Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté volontairement à l'état de squelette d'auth** (login/register/reset). Toutes les pages produit sont marquées DEFERRED dans les `manual-tests-XX.md`. Cette phase reprend chaque "scope UI DEFERRED" et le découpe en sous-features livrables, en commençant par les fondations design transverses.
+
+### Phase A — Fondations design (préalable à tout)
+- **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy)
+- **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.)
+- **F38** App Shell, Layout & Navigation (sidebar, header, layouts, middlewares route)
+
+### Phase B — Briques transversales LLM/chat
+- **F39** Bottom Sheet Engine — UI de F15 (`ask_*`, `show_form`, `show_summary_card`)
+- **F40** Visualization Library — UI de F16 (KPI, charts, mermaid, table, map)
+- **F41** Chat Conversational Layer — UI de F12/F13/F14/F18 (shell, bubbles, EventBus, langgraph)
+
+### Phase C — Onboarding & profil
+- **F42** Onboarding Tour & Auth UX Polish (driver.js, register multi-étapes, password strength)
+- **F43** Profile Entreprise & Projets UI — UI de F11 + F12-profile-projets
+
+### Phase D — Tableaux de bord & visualisations métier
+- **F44** Dashboard PME — UI de F32 (cartes scores, carbone, crédit, candidatures, plan, attestations)
+- **F45** Plan d'action ESG UI — UI de F31 (timeline horizontal, cards étapes, drawer édition)
+- **F46** Scoring ESG visualisations — UI de F23 (radar, drilldown, multi-référentiels)
+- **F47** Empreinte carbone UI — UI de F28 (Scope 1/2/3 donut, drilldown, comparateur facteurs)
+- **F48** Credit scoring UI — UI de F29 (gauge, sub-scores, badges éligibilité, recos)
+
+### Phase E — Documents, rapports, attestations
+- **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30
+- **F50** Documents upload + OCR viewer UI — UI de F22
+
+### Phase F — Matching, candidatures, simulateur
+- **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27
+
+### Phase G — Notifications & extension panneau
+- **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export
+
+### Sprint UI recommandé
+
+- **Sprint UI-1 (Fondations)** : 36 → 37 → 38
+- **Sprint UI-2 (Briques chat/LLM)** : 39 → 40 → 41
+- **Sprint UI-3 (Onboarding + profil)** : 42 → 43
+- **Sprint UI-4 (Dashboards & viz métier)** : 44 → 45 → 46 → 47 → 48
+- **Sprint UI-5 (Documents & rapports)** : 49 → 50
+- **Sprint UI-6 (Financement & flux complexes)** : 51
+- **Sprint UI-7 (Périphérie)** : 52
+
+**Important** : F36–F38 sont **bloquantes** pour tout le reste. Ne pas les paralléliser avec F39+. Les phases D–G peuvent être largement parallélisées une fois la phase B livrée.
+
+---
+
 ## Lancer une feature avec Spec-Kit
 
 ```bash

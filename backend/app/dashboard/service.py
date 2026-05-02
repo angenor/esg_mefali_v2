@@ -246,7 +246,7 @@ def build_export(db: Session, account_id: uuid.UUID) -> DataExportOut:
     aid = {"aid": str(account_id)}
 
     account_row = db.execute(
-        text("SELECT id, type FROM account WHERE id = :aid"), aid
+        text("SELECT id, name FROM account WHERE id = :aid"), aid
     ).first()
     account = _row_to_dict(account_row) if account_row else {"id": str(account_id)}
 

@@ -8,8 +8,8 @@ help:
 	@echo "  make db-down       Arrête Postgres"
 	@echo "  make db-reset      Reset complet (down -v + up + migrate)"
 	@echo "  make migrate       Applique les migrations Alembic"
-	@echo "  make backend       Démarre uvicorn sur :8000"
-	@echo "  make frontend      Démarre Nuxt sur :3000"
+	@echo "  make backend       Démarre uvicorn sur :8010"
+	@echo "  make frontend      Démarre Nuxt sur :3001"
 	@echo "  make test          Lance backend + frontend tests"
 	@echo "  make lint          Lance ruff backend + eslint frontend"
 
@@ -34,10 +34,10 @@ migrate:
 	cd backend && . .venv/bin/activate && alembic upgrade head
 
 backend:
-	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload --port 8000
+	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload --port 8010
 
 frontend:
-	cd frontend && pnpm dev
+	cd frontend && pnpm dev --port 3001
 
 test: test-backend test-frontend
 

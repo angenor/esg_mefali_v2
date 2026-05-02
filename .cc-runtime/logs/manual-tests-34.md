@@ -76,6 +76,19 @@ cd backend && alembic upgrade head   # applique 0023_f34_notification
 cd backend && alembic downgrade -1   # rollback (DROP TABLE notification)
 ```
 
+## Run 2026-05-02 — agent (smoke endpoints)
+
+- [x] `GET /me/candidatures` → **200** `[]` (compte sans candidature).
+- [x] `PATCH /me/candidatures/<bad-id>/status -d '{"statut":"badvalue"}'` → **422** literal_error sur enum.
+- [x] `GET /me/notifications` → **200** `[]` puis **200** après seed direct (1 notif kind=offre_recommandee).
+- [x] `GET /me/notifications?unread=true&limit=20` → **200** retourne la notif (read_at:null).
+- [x] `PATCH /me/notifications/<id>/read` → **200** `{id, read_at}`.
+- [x] Second appel idempotent → **200** même `read_at`.
+- [x] Compte B (cross-tenant) → `PATCH /read` sur notif compte A → **404** `{code:"notification_not_found"}`.
+- [x] `PATCH /me/notifications/00000000…/read` (UUID inexistant) → **404**.
+
+Aucun fix nécessaire pour F34.
+
 ## Notes
 
 - DB esg_mefali a été drop+recreate (schéma précédent appartenait à un autre projet hors lineage F01-F35) avant `alembic upgrade head`.

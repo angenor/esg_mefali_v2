@@ -20,7 +20,7 @@ export default defineNuxtConfig({
         "script-src": ["'self'", "'unsafe-inline'"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "img-src": ["'self'", "data:"],
-        "connect-src": ["'self'", "http://localhost:8000"],
+        "connect-src": ["'self'", "http://localhost:8000", "http://localhost:8010"],
       },
     },
   },
@@ -33,7 +33,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8000",
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8010",
     },
   },
 

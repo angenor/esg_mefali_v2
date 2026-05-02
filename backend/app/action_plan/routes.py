@@ -95,9 +95,9 @@ def generate_action_plan(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    response = _serialize_plan(plan)
     db.commit()
-    db.refresh(plan)
-    return _serialize_plan(plan)
+    return response
 
 
 @router.get(
@@ -156,6 +156,6 @@ def patch_action_step(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Étape introuvable.",
         ) from exc
+    response = ActionStepRead.model_validate(step)
     db.commit()
-    db.refresh(step)
-    return ActionStepRead.model_validate(step)
+    return response

@@ -62,6 +62,10 @@ imports OK
 - [x] Page HTML `/verify/{public_id}` rendue dans le navigateur. ✅ 2026-04-30 agent-browser. Affiche entreprise, statut, dates, scores, hash, signature Ed25519, fingerprint pubkey, lien PDF. Tested public_id `e3e912a3-01ac-4ec4-97ed-31a0ca67b093`.
 - [x] `POST /me/attestations/{id}/revoke` → la page publique repasse en
       `revoked`. ✅ 2026-04-30 agent-browser. Statut bascule `active` → `revoked` avec timestamp `Revoquee le ...`.
+- [x] `GET /verify/{public_id}/json` → 200 retournant tous les champs. ✅ 2026-04-30.
+- [x] `GET /verify/{public_id}/download` → 200, PDF (5.3KB, version 1.3, 1 page) avec QR code, titre "Attestation ESG Mefali", PME, ID public, dates, scores, versions référentiels, lien verify. ✅ 2026-04-30 (visualisé via screenshot).
+- [x] RLS cross-tenant : PME B logguée → `GET /me/attestations` retourne `[]`, download attestation de PME A → 404. ✅ 2026-04-30.
+- [x] Rate-limit `/verify/{public_id}` 60/minute respecté : 59× 200 puis 6× 429. ✅ 2026-04-30.
 
 ## Périmètre livré (MVP minimal vert)
 
