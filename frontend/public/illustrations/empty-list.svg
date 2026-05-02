@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Liste vide">
+  <title>Liste vide</title>
+  <g fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="60" y="80" width="200" height="160" rx="12" fill="#f8fafc"/>
+    <line x1="80" y1="120" x2="240" y2="120"/>
+    <line x1="80" y1="150" x2="200" y2="150"/>
+    <line x1="80" y1="180" x2="220" y2="180"/>
+    <line x1="80" y1="210" x2="170" y2="210"/>
+  </g>
+  <circle cx="220" cy="220" r="32" fill="#e8f5ee" stroke="#34a87a" stroke-width="2"/>
+  <path d="M210 220h20M220 210v20" stroke="#0f7a4a" stroke-width="2" stroke-linecap="round"/>
+</svg>

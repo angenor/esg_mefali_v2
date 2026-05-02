@@ -17,6 +17,9 @@ importers:
       '@fortawesome/vue-fontawesome':
         specifier: ^3.1.1
         version: 3.2.0(@fortawesome/fontawesome-svg-core@6.7.2)(vue@3.5.33(typescript@6.0.3))
+      '@heroicons/vue':
+        specifier: ^2.1.5
+        version: 2.2.0(vue@3.5.33(typescript@6.0.3))
       '@langchain/langgraph':
         specifier: ^0.2.55
         version: 0.2.74(@langchain/core@0.3.80)(zod-to-json-schema@3.25.2(zod@3.25.76))
@@ -651,6 +654,11 @@ packages:
     peerDependencies:
       '@fortawesome/fontawesome-svg-core': ~1 || ~6 || ~7
       vue: '>= 3.0.0 < 4'
+
+  '@heroicons/vue@2.2.0':
+    resolution: {integrity: sha512-G3dbSxoeEKqbi/DFalhRxJU4mTXJn7GwZ7ae8NuEQzd1bqdd0jAbdaBZlHPcvPD2xI1iGzNVB4k20Un2AguYPw==}
+    peerDependencies:
+      vue: '>= 3'
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -5906,6 +5914,10 @@ snapshots:
   '@fortawesome/vue-fontawesome@3.2.0(@fortawesome/fontawesome-svg-core@6.7.2)(vue@3.5.33(typescript@6.0.3))':
     dependencies:
       '@fortawesome/fontawesome-svg-core': 6.7.2
+      vue: 3.5.33(typescript@6.0.3)
+
+  '@heroicons/vue@2.2.0(vue@3.5.33(typescript@6.0.3))':
+    dependencies:
       vue: 3.5.33(typescript@6.0.3)
 
   '@humanfs/core@0.19.2':

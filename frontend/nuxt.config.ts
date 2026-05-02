@@ -41,6 +41,18 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: "fr" },
       title: "ESG Mefali",
+      link: [
+        {
+          rel: "preload",
+          as: "font",
+          type: "font/woff2",
+          href: "/fonts/Inter-Regular.woff2",
+          crossorigin: "anonymous",
+        },
+        { rel: "icon", type: "image/svg+xml", href: "/brand/symbol.svg" },
+        { rel: "alternate icon", type: "image/x-icon", href: "/favicon.ico" },
+        { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+      ],
     },
   },
 });

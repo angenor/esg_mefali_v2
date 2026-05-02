@@ -201,7 +201,7 @@ Ces invariants viennent du Module 0 du brainstorming et doivent être respectés
 Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté volontairement à l'état de squelette d'auth** (login/register/reset). Toutes les pages produit sont marquées DEFERRED dans les `manual-tests-XX.md`. Cette phase reprend chaque "scope UI DEFERRED" et le découpe en sous-features livrables, en commençant par les fondations design transverses.
 
 ### Phase A — Fondations design (préalable à tout)
-- **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy)
+- **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy) — _in-implementation_, voir [specs/036-design-system-tokens/](../../specs/036-design-system-tokens/)
 - **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.)
 - **F38** App Shell, Layout & Navigation (sidebar, header, layouts, middlewares route)
 

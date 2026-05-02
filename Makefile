@@ -50,6 +50,7 @@ test-frontend:
 lint:
 	cd backend && . .venv/bin/activate && ruff check .
 	cd frontend && pnpm lint
+	bash frontend/scripts/check-no-arbitrary.sh
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

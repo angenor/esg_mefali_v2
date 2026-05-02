@@ -4,6 +4,7 @@
 **Modules brainstorm** : transversal — préalable à toutes les features UI 36-56
 **Dépendances** : F01 (Tailwind v4 installé)
 **Estimation** : 2 jours
+**Statut** : planned → in-implementation (voir [specs/036-design-system-tokens/](../../specs/036-design-system-tokens/)) — F37+ peuvent dépendre de cette fondation
 
 ## Contexte et objectif
 

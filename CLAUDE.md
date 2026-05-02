@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/031-plan-action-rappels-bibliotheque/plan.md
+specs/036-design-system-tokens/plan.md
 <!-- SPECKIT END -->
 
 The Spec Kit "current feature" is tracked in `.specify/feature.json` (`feature_directory`). When unsure which feature is active, read that file first — it points to the spec/plan/tasks under `specs/`.
