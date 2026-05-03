@@ -1,5 +1,10 @@
 <script setup lang="ts">
-// F02 T062 — Page demande de reset password
+// F02 T062 — Page demande de reset password (F38 T029 : layout auth)
+definePageMeta({
+  layout: "auth",
+  public: true,
+  title: "Mot de passe oublié",
+})
 const email = ref("")
 const submitting = ref(false)
 const submitted = ref(false)

@@ -1,4 +1,10 @@
 <script setup lang="ts">
+// F38 T030 — page d'accueil publique
+definePageMeta({
+  layout: "public",
+  public: true,
+  title: "Accueil",
+})
 const { data, pending, error } = useHealth();
 
 const statut = computed(() => {

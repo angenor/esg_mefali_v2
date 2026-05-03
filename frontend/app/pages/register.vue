@@ -1,5 +1,10 @@
 <script setup lang="ts">
-// F02 T030 — Page d'inscription PME
+// F02 T030 — Page d'inscription PME (F38 T029 : layout auth)
+definePageMeta({
+  layout: "auth",
+  public: true,
+  title: "Créer un compte",
+})
 const email = ref("")
 const password = ref("")
 const error = ref<string | null>(null)

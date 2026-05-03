@@ -1,5 +1,10 @@
 <script setup lang="ts">
-// F02 T038 — Page de connexion
+// F02 T038 — Page de connexion (F38 T029 : layout auth)
+definePageMeta({
+  layout: "auth",
+  public: true,
+  title: "Connexion",
+})
 const email = ref("")
 const password = ref("")
 const error = ref<string | null>(null)
@@ -13,8 +18,9 @@ async function onSubmit() {
   submitting.value = true
   try {
     await login({ email: email.value, password: password.value })
-    const next = (route.query.next as string) || "/"
-    await router.push(next)
+    const target =
+      (route.query.redirect as string) || (route.query.next as string) || "/dashboard"
+    await router.push(target)
   } catch {
     error.value = "Identifiants invalides."
   } finally {

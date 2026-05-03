@@ -230,9 +230,13 @@ from app.candidatures.router import (  # noqa: E402
 from app.notifications.router import (  # noqa: E402
     router as f34_notifications_router,
 )
+from app.notifications.stream import (  # noqa: E402
+    router as f38_notifications_stream_router,
+)
 
 app.include_router(f34_me_candidatures_router)
 app.include_router(f34_notifications_router)
+app.include_router(f38_notifications_stream_router)
 
 
 @app.get("/health")

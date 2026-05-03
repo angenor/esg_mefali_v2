@@ -27,7 +27,7 @@ def test_canonicalize_is_deterministic_and_sorted() -> None:
 
 def test_canonicalize_preserves_unicode() -> None:
     payload = crypto.canonicalize_document({"name": "Côte d'Ivoire"})
-    assert payload == '{"name":"Côte d\'Ivoire"}'.encode("utf-8")
+    assert payload == '{"name":"Côte d\'Ivoire"}'.encode()
 
 
 def test_compute_document_hash_matches_sha256() -> None:

@@ -2,19 +2,19 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.attestations.service import compute_status
 
 
 def test_status_active_when_valid_and_not_revoked() -> None:
-    now = datetime(2026, 4, 29, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 29, 10, 0, tzinfo=UTC)
     valid_until = now + timedelta(days=1)
     assert compute_status(valid_until=valid_until, revoked_at=None, now=now) == "active"
 
 
 def test_status_expired_when_valid_until_past() -> None:
-    now = datetime(2026, 4, 29, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 29, 10, 0, tzinfo=UTC)
     valid_until = now - timedelta(seconds=1)
     assert (
         compute_status(valid_until=valid_until, revoked_at=None, now=now) == "expired"
@@ -22,7 +22,7 @@ def test_status_expired_when_valid_until_past() -> None:
 
 
 def test_status_revoked_takes_priority_over_expired() -> None:
-    now = datetime(2026, 4, 29, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 29, 10, 0, tzinfo=UTC)
     valid_until = now - timedelta(days=10)
     revoked_at = now - timedelta(days=5)
     assert (
@@ -32,7 +32,7 @@ def test_status_revoked_takes_priority_over_expired() -> None:
 
 
 def test_status_revoked_takes_priority_over_active() -> None:
-    now = datetime(2026, 4, 29, 10, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 4, 29, 10, 0, tzinfo=UTC)
     valid_until = now + timedelta(days=10)
     revoked_at = now - timedelta(seconds=5)
     assert (

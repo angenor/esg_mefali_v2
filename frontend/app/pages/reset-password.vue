@@ -1,5 +1,10 @@
 <script setup lang="ts">
-// F02 T063 — Page consommation token reset password
+// F02 T063 — Page consommation token reset password (F38 T029 : layout auth)
+definePageMeta({
+  layout: "auth",
+  public: true,
+  title: "Réinitialiser le mot de passe",
+})
 const route = useRoute()
 const router = useRouter()
 const token = (route.query.token as string) || ""
