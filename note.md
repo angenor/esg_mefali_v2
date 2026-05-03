@@ -28,3 +28,24 @@ Dites-moi si vous voyez bien ce message, et si vous souhaitez que je vous aide Ã
 - pkill caffeinate
 
 
+import re
+from pathlib import Path
+
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import cm, mm
+from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    KeepTogether,
+    NextPageTemplate,
+    PageBreak,
+    PageTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+)
+from reportlab.platypus.flowables import HRFlowable
