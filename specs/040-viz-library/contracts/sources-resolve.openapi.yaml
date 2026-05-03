@@ -1,0 +1,116 @@
+openapi: 3.1.0
+info:
+  title: Sources Resolution API (consommé par F40)
+  version: "0.1.0"
+  description: |
+    Endpoint de résolution d'une `Source` à partir de son identifiant. Consommé
+    par le composant `<VizSourcePin>` via le store `useSourcesStore()`.
+
+    L'endpoint formel est défini par la feature F03 (sourcing). F40 documente
+    ici uniquement le contrat dont elle a besoin pour fonctionner. Si
+    l'endpoint n'existe pas encore au moment de l'implémentation F40, le
+    store accepte un mock injectable et une issue est créée pour finaliser
+    F03.
+
+servers:
+  - url: http://localhost:8010
+    description: dev local
+
+paths:
+  /api/sources/{source_id}:
+    get:
+      operationId: getSourceById
+      summary: Résout une source vérifiée par son identifiant
+      parameters:
+        - name: source_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Source trouvée (verified ou revoked)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SourceRef"
+        "404":
+          description: |
+            Source introuvable ou inaccessible pour l'account courant
+            (RLS — P2 retourne 404 et non 403). Le composant
+            `<VizSourcePin>` traite ce cas en fail-silent (US5 #3).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: Authentification manquante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "5XX":
+          description: Erreur serveur — le pin reste invisible côté UI
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    SourcePillar:
+      type: string
+      enum: [E, S, G, financial, regulatory, methodology]
+      description: |
+        Enum fermé (clarification Q3 / FR-009b). Toute valeur hors enum DOIT
+        être traitée comme erreur d'intégration côté frontend.
+
+    SourceStatus:
+      type: string
+      enum: [verified, revoked]
+
+    SourceRef:
+      type: object
+      required: [source_id, title, url, pillar, valid_from, status]
+      additionalProperties: false
+      properties:
+        source_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        url:
+          type: string
+          format: uri
+        pillar:
+          $ref: "#/components/schemas/SourcePillar"
+        valid_from:
+          type: string
+          format: date
+          description: Date ISO-8601 (YYYY-MM-DD) de début de validité
+        valid_to:
+          type: string
+          format: date
+          nullable: true
+          description: Date de fin de validité ou null = open
+        status:
+          $ref: "#/components/schemas/SourceStatus"
+        revoked_reason:
+          type: string
+          nullable: true
+          description: Présent quand status = 'revoked'
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+          description: Corrélation côté observabilité backend

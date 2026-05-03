@@ -41,6 +41,12 @@ export default defineConfig({
         'app/composables/useChatBottomSheet.ts',
         'app/stores/chatBottomSheet.ts',
         'app/utils/moneyPeg.ts',
+        // F40 — viz library
+        'app/components/viz/**',
+        'app/composables/useChartTheme.ts',
+        'app/stores/sources.ts',
+        'app/utils/moneyFormat.ts',
+        'app/utils/mermaidSanitize.ts',
       ],
       thresholds: {
         lines: 80,

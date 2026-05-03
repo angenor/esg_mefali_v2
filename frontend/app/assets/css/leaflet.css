@@ -1,0 +1,2 @@
+/* F40 T003 — import des styles Leaflet (chargés uniquement quand un composant <VizLeafletMap> est monté côté client). */
+@import "leaflet/dist/leaflet.css";

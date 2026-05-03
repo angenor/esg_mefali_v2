@@ -52,3 +52,6 @@ export function sanitizeText(input: unknown): string {
 // Alias courts attendus par les wrappers F39 (cf. tasks T005).
 export const text = sanitizeText
 export const safeHtml = sanitizeHtml
+
+// F40 T047 — Réexport unique du sanitizer Mermaid (single source of truth DOMPurify).
+export { sanitizeMermaidSvg } from './mermaidSanitize'
