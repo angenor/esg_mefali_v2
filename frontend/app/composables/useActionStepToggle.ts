@@ -13,6 +13,8 @@ import {
   useDashboardBus,
   trackLocalMutation as busTrackLocalMutation,
 } from "~/composables/useDashboardBus"
+import { useActionPlanStore } from "~/stores/actionPlan"
+import { useChatEventBus } from "~/composables/useChatEventBus"
 import { useToast } from "~/composables/useToast"
 import { useT } from "~/composables/useT"
 
@@ -21,6 +23,10 @@ export interface UseActionStepToggle {
   pendingId: ComputedRef<string | null>
   /** Marque l'étape comme `done`, gère optimistic + sync EventBus + erreurs. */
   complete: (stepId: string) => Promise<void>
+  /** F45 — Toggle bidirectionnel via store actionPlan + FIFO interne. */
+  toggle: (stepId: string, nextStatus: "todo" | "done") => Promise<void>
+  isLoading: (stepId: string) => ComputedRef<boolean>
+  errorOf: (stepId: string) => ComputedRef<string | null>
 }
 
 interface RuntimeConfigShape {
@@ -70,8 +76,46 @@ export function useActionStepToggle(): UseActionStepToggle {
     }
   }
 
+  // F45 — toggle bidirectionnel piloté par le store actionPlan. La file FIFO
+  // par step_id est gérée dans `actionPlanStore.applyOptimisticPatch`.
+  async function toggle(stepId: string, nextStatus: "todo" | "done"): Promise<void> {
+    const planStore = useActionPlanStore()
+    const chatBus = useChatEventBus()
+    try {
+      planStore.trackLocalEmit(stepId)
+      await planStore.applyOptimisticPatch(stepId, { status: nextStatus })
+      chatBus.emit("entity_updated", {
+        eventType: "entity_updated",
+        entityType: "action_step",
+        entityId: stepId,
+        fieldsUpdated: ["status"],
+        source: "manual",
+        ts: new Date().toISOString(),
+      })
+      // Sync dashboard si déjà chargé.
+      busTrackLocalMutation(stepId)
+      bus.emit("action_step:completed", { id: stepId, source: "chat" })
+    } catch (err) {
+      toast.push({ severity: "error", message: t("planAction.errors.toggleFailed") })
+      throw err
+    }
+  }
+
+  function isLoading(stepId: string): ComputedRef<boolean> {
+    const planStore = useActionPlanStore()
+    return computed(() => planStore.stepStates[stepId]?.loading ?? false)
+  }
+
+  function errorOf(stepId: string): ComputedRef<string | null> {
+    const planStore = useActionPlanStore()
+    return computed(() => planStore.stepStates[stepId]?.error ?? null)
+  }
+
   return {
     pendingId: computed(() => pending.value),
     complete,
+    toggle,
+    isLoading,
+    errorOf,
   }
 }

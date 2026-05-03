@@ -38,6 +38,9 @@ export default defineNuxtConfig({
       // Override via `NUXT_PUBLIC_DISABLE_EMAIL_VERIFICATION=false`. Default: true.
       disableEmailVerification:
         process.env.NUXT_PUBLIC_DISABLE_EMAIL_VERIFICATION ?? "true",
+      // F45 T071 — Export PDF du plan d'action (différé jusqu'à F51).
+      featurePlanExportPdf:
+        process.env.NUXT_PUBLIC_FEATURE_PLAN_EXPORT_PDF ?? "false",
     },
   },
 
