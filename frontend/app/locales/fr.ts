@@ -241,4 +241,77 @@ export default {
   "profil.projets.history.source.import": "Import",
   "profil.projets.history.source.admin": "Admin",
   "profil.projets.history.load_more": "Charger plus",
+
+  // ===== F44 — Dashboard PME =====
+  "dashboard.welcome.greeting_morning": "Bonjour, {nom}",
+  "dashboard.welcome.greeting_evening": "Bonsoir, {nom}",
+  "dashboard.welcome.last_diagnostic_relative": "Dernier diagnostic : {relative}",
+  "dashboard.welcome.no_diagnostic": "Aucun diagnostic encore",
+  "dashboard.welcome.cta_chat": "Discuter avec l'IA",
+
+  "dashboard.cards.scoring.title": "Scoring ESG",
+  "dashboard.cards.scoring.empty_message": "Lancez votre premier diagnostic ESG pour voir votre score.",
+  "dashboard.cards.scoring.empty_cta": "Lancer mon premier diagnostic ESG",
+  "dashboard.cards.scoring.score_label": "Score global",
+  "dashboard.cards.scoring.axis_e": "Environnement",
+  "dashboard.cards.scoring.axis_s": "Social",
+  "dashboard.cards.scoring.axis_g": "Gouvernance",
+  "dashboard.cards.scoring.sources": "{count} source(s)",
+
+  "dashboard.cards.carbon.title": "Empreinte carbone",
+  "dashboard.cards.carbon.empty_message": "Calculez votre empreinte carbone annuelle.",
+  "dashboard.cards.carbon.empty_cta": "Démarrer mon bilan carbone",
+  "dashboard.cards.carbon.kpi_label": "tCO₂e (annuel)",
+  "dashboard.cards.carbon.trend_label": "4 derniers trimestres",
+
+  "dashboard.cards.credit.title": "Score crédit vert",
+  "dashboard.cards.credit.empty_message": "Calculez votre score de crédit vert pour découvrir votre éligibilité.",
+  "dashboard.cards.credit.empty_cta": "Calculer mon score crédit",
+  "dashboard.cards.credit.gauge_label": "Score combiné",
+  "dashboard.cards.credit.eligibility_label": "Éligibilité",
+  "dashboard.cards.credit.coherence_warning": "Données à confirmer",
+
+  "dashboard.cards.candidatures.title": "Candidatures",
+  "dashboard.cards.candidatures.empty_message": "Aucune candidature pour le moment.",
+  "dashboard.cards.candidatures.empty_cta": "Voir les opportunités",
+  "dashboard.cards.candidatures.recent_label": "Récentes",
+  "dashboard.cards.candidatures.no_date": "Pas encore soumise",
+
+  "dashboard.cards.rapports.title": "Rapports & attestations",
+  "dashboard.cards.rapports.empty_message": "Vos rapports et attestations vérifiables apparaîtront ici.",
+  "dashboard.cards.rapports.empty_cta": "Générer un rapport",
+  "dashboard.cards.rapports.recent_label": "Rapports récents",
+  "dashboard.cards.rapports.attestations_label": "Attestations actives",
+  "dashboard.cards.rapports.verify_aria": "Ouvrir la page publique de vérification",
+
+  "dashboard.cards.action_plan.title": "Plan d'action",
+  "dashboard.cards.action_plan.empty_message": "Aucune étape planifiée. Discutez avec l'IA pour construire votre plan.",
+  "dashboard.cards.action_plan.empty_cta": "Construire mon plan d'action",
+  "dashboard.cards.action_plan.priority_haute": "Haute",
+  "dashboard.cards.action_plan.priority_moyenne": "Moyenne",
+  "dashboard.cards.action_plan.priority_basse": "Basse",
+  "dashboard.cards.action_plan.complete_aria": "Marquer l'étape comme terminée",
+
+  "dashboard.cards.intermediaires.title": "Intermédiaires recommandés",
+  "dashboard.cards.intermediaires.empty_message": "Aucune recommandation pour le moment.",
+  "dashboard.cards.intermediaires.empty_cta": "Découvrir le matching",
+  "dashboard.cards.intermediaires.see_all": "Voir tous",
+
+  "dashboard.card.error.message": "Une erreur est survenue lors du chargement.",
+  "dashboard.card.error.retry": "Réessayer",
+
+  "dashboard.export.button": "Exporter mes données",
+  "dashboard.export.toast_started": "Téléchargement démarré.",
+  "dashboard.export.toast_error": "Export impossible, réessayez plus tard.",
+  "dashboard.export.toast_success": "Export terminé.",
+
+  "dashboard.action_plan.toggle_error": "Action impossible, réessayez.",
+
+  "dashboard.statut.candidature.brouillon": "Brouillon",
+  "dashboard.statut.candidature.en_cours": "En cours",
+  "dashboard.statut.candidature.soumise": "Soumise",
+  "dashboard.statut.candidature.acceptee": "Acceptée",
+  "dashboard.statut.candidature.refusee": "Refusée",
+  "dashboard.statut.candidature.retiree": "Retirée",
+  "dashboard.statut.candidature.archivee": "Archivée",
 } as const
