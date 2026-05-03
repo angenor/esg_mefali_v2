@@ -202,7 +202,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 
 ### Phase A — Fondations design (préalable à tout)
 - **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy) — _in-implementation_, voir [specs/036-design-system-tokens/](../../specs/036-design-system-tokens/)
-- **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.)
+- **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.) — _done_ (2026-05-03), voir [specs/037-ui-primitives/](../../specs/037-ui-primitives/)
 - **F38** App Shell, Layout & Navigation (sidebar, header, layouts, middlewares route)
 
 ### Phase B — Briques transversales LLM/chat
