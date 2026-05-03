@@ -13,6 +13,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response, 
 from sqlalchemy.orm import Session
 
 from app.auth import service as auth_service
+from app.auth.dependencies import get_current_user
 from app.auth.schemas import (
     Error,
     ForgotIn,
@@ -35,11 +36,17 @@ from app.models.account_user import AccountUser
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30  # 30 jours
+REFRESH_TTL_SECONDS = 60 * 60 * 24 * 30  # 30 jours (rester connecté)
+REFRESH_TTL_SESSION_SECONDS = 60 * 60 * 8  # 8 h (session courte)
 
 
 def _set_session_cookies(
-    resp: Response, *, access: str, refresh: str, csrf: str
+    resp: Response,
+    *,
+    access: str,
+    refresh: str,
+    csrf: str,
+    remember_me: bool = True,
 ) -> None:
     s = get_settings()
     common = {
@@ -48,11 +55,12 @@ def _set_session_cookies(
         "domain": s.COOKIE_DOMAIN if s.COOKIE_DOMAIN != "localhost" else None,
         "path": "/",
     }
+    refresh_max_age = REFRESH_TTL_SECONDS if remember_me else REFRESH_TTL_SESSION_SECONDS
     resp.set_cookie(
         ACCESS_COOKIE, access, httponly=True, max_age=DEFAULT_ACCESS_TTL_SECONDS, **common
     )
     resp.set_cookie(
-        REFRESH_COOKIE, refresh, httponly=True, max_age=REFRESH_TTL_SECONDS, **common
+        REFRESH_COOKIE, refresh, httponly=True, max_age=refresh_max_age, **common
     )
     # CSRF cookie : NON httpOnly (le JS doit le lire pour le renvoyer)
     resp.set_cookie(
@@ -79,6 +87,7 @@ def _user_to_meout(u: AccountUser) -> MeOut:
         email=u.email,
         created_at=u.created_at,
         last_login_at=u.last_login_at,
+        email_verified_at=getattr(u, "email_verified_at", None),
     )
 
 
@@ -149,6 +158,7 @@ def login_endpoint(
         access=issued.access_token,
         refresh=issued.refresh_token_clear,
         csrf=issued.csrf_token,
+        remember_me=body.remember_me,
     )
     return _user_to_meout(issued.user)
 
@@ -230,19 +240,36 @@ def forgot_password(
     body: Annotated[ForgotIn, Body()],
     db: Session = Depends(get_db),
 ) -> NeutralAck:
-    _check_rate(request, "forgot", "5/minute")
+    """F42 R8 — réponse strictement neutre (anti-énumération).
+
+    Réussite ou non, on retourne ``NeutralAck`` avec un délai constant minimal
+    pour réduire le canal latéral temps.
+    """
+    _check_rate(request, "forgot", "3/minute")
+    import time
+
     from app.services.email_sender import get_email_sender
+
+    deadline = time.monotonic() + 0.10  # 100 ms minimum
 
     token_clear = auth_service.request_password_reset(db, email=body.email)
     db.commit()
     if token_clear:
         sender = get_email_sender()
         link = auth_service.build_reset_link(token_clear)
+        ttl = get_settings().PASSWORD_RESET_TTL_MINUTES
         sender.send(
             to=body.email,
             subject="Réinitialisation de votre mot de passe",
-            body=f"Pour réinitialiser votre mot de passe, cliquez : {link}\n(valable 30 minutes)",
+            body=(
+                f"Pour réinitialiser votre mot de passe, cliquez : {link}\n"
+                f"(valable {ttl} minutes)"
+            ),
         )
+    # Padding temporel
+    remaining = deadline - time.monotonic()
+    if remaining > 0:
+        time.sleep(remaining)
     return NeutralAck()
 
 
@@ -268,3 +295,35 @@ def reset_password(
         ) from exc
     db.commit()
     return Response(status_code=204)
+
+
+# ---------- /auth/email/resend (F42 US4) ----------
+
+
+import logging  # noqa: E402
+
+_email_resend_logger = logging.getLogger("auth.email_resend")
+
+
+@router.post(
+    "/email/resend",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=NeutralAck,
+)
+def resend_verification_email(
+    request: Request,
+    user: AccountUser = Depends(get_current_user),
+) -> NeutralAck:
+    """F42 US4 — Renvoi du lien de vérification email.
+
+    Réponse neutre (anti-énumération) ; rate-limited.
+    Si l'utilisateur a déjà ``email_verified_at`` non NULL, on ne renvoie rien
+    mais on retourne le même ack pour rester neutre.
+    """
+    _check_rate(request, "email_resend", "3/minute")
+    if getattr(user, "email_verified_at", None) is None:
+        _email_resend_logger.info(
+            "email_verification_resend",
+            extra={"user_id": str(user.id), "email": user.email},
+        )
+    return NeutralAck()

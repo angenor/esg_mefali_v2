@@ -1,0 +1,67 @@
+/* F42 T005 — overrides driver.js + reduced motion */
+
+:root {
+  --tour-popover-bg: #ffffff;
+  --tour-popover-fg: #0f172a;
+  --tour-accent: #16a34a;
+  --tour-overlay: rgba(15, 23, 42, 0.6);
+  --tour-padding: 16px;
+  --tour-radius: 12px;
+}
+
+.driver-popover {
+  background: var(--tour-popover-bg);
+  color: var(--tour-popover-fg);
+  border-radius: var(--tour-radius);
+  padding: var(--tour-padding);
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.25);
+}
+
+.driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.driver-popover-progress-text {
+  color: rgba(15, 23, 42, 0.6);
+  font-size: 0.75rem;
+}
+
+.driver-popover-next-btn,
+.driver-popover-prev-btn,
+.driver-popover-close-btn {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.driver-popover-next-btn {
+  background: var(--tour-accent);
+  color: #ffffff;
+  border: 1px solid var(--tour-accent);
+}
+
+.driver-popover-prev-btn {
+  background: transparent;
+  color: var(--tour-popover-fg);
+  border: 1px solid rgba(15, 23, 42, 0.2);
+}
+
+.driver-overlay {
+  background: var(--tour-overlay);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover,
+  .driver-overlay,
+  .driver-popover * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

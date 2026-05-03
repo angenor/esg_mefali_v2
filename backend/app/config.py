@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     RESET_PASSWORD_BASE_URL: str = "http://localhost:3000/reset-password"
+    PASSWORD_RESET_TTL_MINUTES: int = 60
 
     # --- Embeddings (utilisé en F18) ---
     VOYAGE_API_KEY: str = Field(..., min_length=1)

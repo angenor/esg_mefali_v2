@@ -48,6 +48,7 @@ const baseBtn = computed(
         :class="[baseBtn, isActive(item) ? 'text-brand-700' : 'text-gray-600']"
         :data-active="isActive(item) ? 'true' : 'false'"
         :data-testid="`bottom-nav-${item.id}`"
+        :data-tour="item.id === 'chat' ? 'chat' : item.id === 'profil' ? 'profil' : undefined"
         :style="{ minWidth: '48px', minHeight: '48px' }"
       >
         <span class="text-base" aria-hidden="true">●</span>

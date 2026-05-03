@@ -11,6 +11,7 @@ export interface MeOut {
   raison_sociale?: string | null
   created_at: string
   last_login_at: string | null
+  email_verified_at?: string | null
 }
 
 export const useAuthStore = defineStore("auth", {

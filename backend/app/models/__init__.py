@@ -33,6 +33,7 @@ from app.models.skill import Skill, SkillSource  # noqa: E402,F401
 from app.models.source import Source  # noqa: E402,F401
 from app.models.unsourced_claim_log import UnsourcedClaimLog  # noqa: E402,F401
 from app.models.url_pattern import UrlPattern  # noqa: E402,F401
+from app.models.user_preferences import UserPreferences  # noqa: E402,F401
 
 __all__ = [
     "Account",
@@ -53,4 +54,5 @@ __all__ = [
     "Source",
     "UnsourcedClaimLog",
     "UrlPattern",
+    "UserPreferences",
 ]

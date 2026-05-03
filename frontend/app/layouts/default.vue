@@ -9,6 +9,7 @@ import TheNotificationsBell from '~/components/shell/TheNotificationsBell.vue'
 import TheAvatarMenu from '~/components/shell/TheAvatarMenu.vue'
 import TheBreadcrumbs from '~/components/shell/TheBreadcrumbs.vue'
 import TheErrorBoundary from '~/components/shell/TheErrorBoundary.vue'
+import EmailVerificationBanner from '~/components/common/EmailVerificationBanner.vue'
 import { NAV_ITEMS } from '~/utils/shell-nav'
 import { useCommandPalette } from '~/composables/useCommandPalette'
 import { useNotificationsStream } from '~/composables/useNotificationsStream'
@@ -176,6 +177,7 @@ onBeforeUnmount(() => {
         </template>
       </TheHeader>
       <main class="flex-1 overflow-y-auto pb-14 lg:pb-0" data-testid="main-content">
+        <EmailVerificationBanner />
         <NuxtErrorBoundary>
           <slot />
           <template #error="{ error, clearError }">

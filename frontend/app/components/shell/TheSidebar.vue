@@ -53,6 +53,7 @@ function toggle() {
       props.collapsed ? 'w-16' : 'w-64',
     ]"
     data-testid="the-sidebar"
+    data-tour="sidebar"
   >
     <div class="h-14 flex items-center px-4 border-b border-gray-200">
       <span v-if="!props.collapsed" class="text-lg font-bold text-brand-600">ESG Mefali</span>
@@ -73,6 +74,7 @@ function toggle() {
           <NuxtLink
             :to="item.to"
             :data-active="isActive(item.to) ? 'true' : 'false'"
+            :data-tour="item.id === 'plan-action' ? 'plan-action' : item.id === 'profil' ? 'profil' : item.id === 'bibliotheque' ? 'bibliotheque' : item.id === 'parametres' ? 'parametres' : undefined"
             :class="[
               'group flex items-center rounded-md px-2 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500',
               isActive(item.to)

@@ -1,6 +1,8 @@
 // F02 T028, T037, T056, T061 — Composable auth (register, login, logout, refresh, forgot, reset)
+// F42 T036, T053 — login charge userPreferences + supporte rememberMe
 import type { MeOut } from "~/stores/auth"
 import { useAuthStore } from "~/stores/auth"
+import { useUserPreferencesStore } from "~/stores/userPreferences"
 
 export function useAuth() {
   const config = useRuntimeConfig()
@@ -29,13 +31,26 @@ export function useAuth() {
     return data
   }
 
-  async function login(payload: { email: string; password: string }): Promise<MeOut> {
+  async function login(
+    payload: { email: string; password: string },
+    options?: { rememberMe?: boolean },
+  ): Promise<MeOut> {
+    const body: Record<string, unknown> = { ...payload }
+    if (options?.rememberMe !== undefined) {
+      body.remember_me = options.rememberMe
+    }
     const data = await $fetch<MeOut>(`${apiBase}/auth/login`, {
       method: "POST",
       credentials: "include",
-      body: payload,
+      body,
     })
     store.setUser(data)
+    // Charge les préférences UX pour permettre startIfPending() au mount du shell
+    try {
+      await useUserPreferencesStore().load()
+    } catch {
+      // Ignorable si endpoint indispo : on continue
+    }
     return data
   }
 
@@ -48,6 +63,11 @@ export function useAuth() {
       })
     } finally {
       store.clear()
+      try {
+        useUserPreferencesStore().reset()
+      } catch {
+        // Store non disponible (SSR)
+      }
     }
   }
 
