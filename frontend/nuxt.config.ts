@@ -34,6 +34,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8010",
+      // Désactivation temporaire du bandeau de vérification email pour les tests.
+      // Override via `NUXT_PUBLIC_DISABLE_EMAIL_VERIFICATION=false`. Default: true.
+      disableEmailVerification:
+        process.env.NUXT_PUBLIC_DISABLE_EMAIL_VERIFICATION ?? "true",
     },
   },
 

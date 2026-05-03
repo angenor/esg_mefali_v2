@@ -9,8 +9,8 @@ export interface NavItem {
 
 export const NAV_ITEMS: ReadonlyArray<NavItem> = [
   { id: 'dashboard', label: 'Tableau de bord', icon: 'home', to: '/dashboard' },
-  { id: 'profil', label: 'Profil entreprise', icon: 'building', to: '/profil' },
-  { id: 'projets', label: 'Projets', icon: 'briefcase', to: '/projets' },
+  { id: 'profil', label: 'Profil entreprise', icon: 'building', to: '/profil/entreprise' },
+  { id: 'projets', label: 'Projets', icon: 'briefcase', to: '/profil/projets' },
   { id: 'plan-action', label: "Plan d'action", icon: 'check-circle', to: '/plan-action' },
   { id: 'scoring', label: 'Scoring ESG', icon: 'chart-bar', to: '/scoring' },
   { id: 'carbone', label: 'Empreinte carbone', icon: 'cloud', to: '/carbone' },

@@ -11,7 +11,7 @@ interface SheetItem {
 }
 
 const ITEMS: ReadonlyArray<SheetItem> = [
-  { id: 'projets', label: 'Projets', to: '/projets' },
+  { id: 'projets', label: 'Projets', to: '/profil/projets' },
   { id: 'scoring', label: 'Scoring ESG', to: '/scoring' },
   { id: 'carbone', label: 'Empreinte carbone', to: '/carbone' },
   { id: 'credit', label: 'Score crédit', to: '/credit' },

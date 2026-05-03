@@ -17,7 +17,22 @@ const isUnverified = computed(() => {
   return !!user.value && user.value.email_verified_at == null
 })
 
-const visible = computed(() => isUnverified.value && !dismissed.value)
+// Désactivation temporaire pour faciliter les tests : `NUXT_PUBLIC_DISABLE_EMAIL_VERIFICATION=true`
+// dans `.env`, ou flag global `window.__DISABLE_EMAIL_VERIFICATION__ = true`.
+// À retirer / contrôler plus finement avant prod.
+const verificationDisabled = computed(() => {
+  const cfg = useRuntimeConfig()
+  const flag = (cfg.public as Record<string, unknown>).disableEmailVerification
+  if (flag === true || flag === "true" || flag === "1") return true
+  if (typeof window !== "undefined" && (window as { __DISABLE_EMAIL_VERIFICATION__?: boolean }).__DISABLE_EMAIL_VERIFICATION__) {
+    return true
+  }
+  return false
+})
+
+const visible = computed(
+  () => isUnverified.value && !dismissed.value && !verificationDisabled.value,
+)
 
 async function resend() {
   const config = useRuntimeConfig()
