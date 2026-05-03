@@ -13,7 +13,12 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    include: ['tests/**/*.test.ts', 'tests/**/*.spec.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.spec.ts',
+      'app/**/__tests__/**/*.test.ts',
+      'app/**/__tests__/**/*.spec.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json-summary'],
@@ -29,6 +34,13 @@ export default defineConfig({
         'app/composables/useReducedMotion.ts',
         'app/composables/useToast.ts',
         'app/utils/sanitize.ts',
+        // F39 — bottom sheet engine
+        'app/components/chat/bottom-sheet/**',
+        'app/composables/useBottomSheetAnimation.ts',
+        'app/composables/useBottomSheetSubmit.ts',
+        'app/composables/useChatBottomSheet.ts',
+        'app/stores/chatBottomSheet.ts',
+        'app/utils/moneyPeg.ts',
       ],
       thresholds: {
         lines: 80,

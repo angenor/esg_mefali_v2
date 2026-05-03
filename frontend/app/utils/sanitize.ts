@@ -37,3 +37,18 @@ export function sanitizeHtml(html: string, options: SanitizeOptions = {}): strin
     ALLOW_DATA_ATTR: false,
   }) as string
 }
+
+// Sortie purement textuelle : tout HTML est strippé (utilisé pour `label`,
+// `description`, `source_label` reçus du backend dans les payloads tools — F39 R4).
+export function sanitizeText(input: unknown): string {
+  if (typeof input !== 'string' || input.length === 0) return ''
+  const purify = getPurify()
+  if (!purify) {
+    return input.replace(/<[^>]*>/g, '')
+  }
+  return purify.sanitize(input, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] }) as string
+}
+
+// Alias courts attendus par les wrappers F39 (cf. tasks T005).
+export const text = sanitizeText
+export const safeHtml = sanitizeHtml
