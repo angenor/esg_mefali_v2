@@ -58,7 +58,33 @@ describe("CardScoring", () => {
     })
     expect(wrapper.find(".kpi").attributes("data-value")).toBe("62")
     expect(wrapper.find(".radar").exists()).toBe(true)
-    expect(wrapper.find('[data-testid="source-count"]').text()).toContain("4")
+    expect(wrapper.find('[data-testid="dashboard-source-list"]').text()).toContain("4")
+  })
+
+  // F44 T052 [US6] — VizSourcePin / DashboardSourceList cliquable ouvre popover.
+  it("filled → source pin cliquable ouvre un popover listant l'accès aux sources", async () => {
+    withPinia()
+    const wrapper = mount(CardScoring, {
+      props: {
+        vm: {
+          kind: "filled",
+          data: {
+            scoreGlobal: 62,
+            byAxis: { e: 60, s: 65, g: 70 },
+            referentielCode: "GCF",
+            referentielVersion: 2,
+            computedAt: new Date(),
+            sourceCount: 4,
+            href: "/scoring",
+          },
+        },
+      },
+      global: { stubs: STUBS },
+    })
+    const pin = wrapper.find('[data-testid="source-pin"]')
+    expect(pin.exists()).toBe(true)
+    await pin.trigger("click")
+    expect(wrapper.find('[data-testid="source-list-pop"]').exists()).toBe(true)
   })
 
   it("error → affiche message + bouton retry", async () => {

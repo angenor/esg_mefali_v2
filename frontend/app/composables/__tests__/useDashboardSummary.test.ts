@@ -108,6 +108,23 @@ describe("useDashboardSummary", () => {
     wrapper.unmount()
   })
 
+  // F44 T059 [US8] — polling 60 s déclenche un fetch périodique (fake timers).
+  it("polling déclenche fetch après 60 s simulés", async () => {
+    vi.useFakeTimers()
+    const fetchSpy = vi.fn().mockResolvedValue(FIXTURE)
+    globalThis.$fetch = fetchSpy
+    const wrapper = mountHarness()
+    await Promise.resolve()
+    await Promise.resolve()
+    fetchSpy.mockClear()
+    vi.advanceTimersByTime(60_000)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    wrapper.unmount()
+    vi.useRealTimers()
+  })
+
   it("cleanup à l'unmount : pas de re-fetch après émission", async () => {
     const fetchSpy = vi.fn().mockResolvedValue(FIXTURE)
     globalThis.$fetch = fetchSpy

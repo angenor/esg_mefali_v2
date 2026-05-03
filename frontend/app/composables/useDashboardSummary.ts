@@ -16,6 +16,7 @@ import {
 } from "~/lib/dashboardEventMap"
 import {
   useDashboardBus,
+  isLocalMutation as busIsLocalMutation,
   type DashboardBusEvent,
 } from "~/composables/useDashboardBus"
 import { useT } from "~/composables/useT"
@@ -99,8 +100,13 @@ export function useDashboardSummary(
   function makeHandler(eventName: DashboardEventName) {
     return (event: DashboardBusEvent) => {
       pruneExpiredMutations()
-      // Anti-loop : event d'origine locale corrélé à une mutation tracée.
-      if (event.source === "dashboard" && event.id && localMutations.has(event.id)) {
+      // Anti-loop : event d'origine locale corrélé à une mutation tracée
+      // (carte locale OU registre bus partagé entre composables).
+      if (
+        event.source === "dashboard" &&
+        event.id &&
+        (localMutations.has(event.id) || busIsLocalMutation(event.id))
+      ) {
         return
       }
       const blocks = EVENT_TO_BLOCK_MAP[eventName]

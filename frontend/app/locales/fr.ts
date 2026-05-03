@@ -307,6 +307,9 @@ export default {
 
   "dashboard.action_plan.toggle_error": "Action impossible, réessayez.",
 
+  "dashboard.cards.scoring.source_pop_message": "Liste détaillée disponible sur la page complète.",
+  "dashboard.cards.scoring.source_pop_link": "Voir les sources",
+
   "dashboard.statut.candidature.brouillon": "Brouillon",
   "dashboard.statut.candidature.en_cours": "En cours",
   "dashboard.statut.candidature.soumise": "Soumise",

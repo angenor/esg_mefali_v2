@@ -7,6 +7,7 @@ import VizLineChart from "~/components/viz/VizLineChart.vue"
 import CardSkeleton from "./CardSkeleton.vue"
 import CardErrorState from "./CardErrorState.vue"
 import EmptyCardCTA from "./EmptyCardCTA.vue"
+import DashboardSourceList from "./DashboardSourceList.vue"
 import { useT } from "~/composables/useT"
 import type { CardKind, CarbonCardData } from "~/lib/mapSummaryToCardViewModels"
 
@@ -56,6 +57,11 @@ const trendSeries = computed(() => {
         size="sm"
       />
       <VizLineChart v-if="trendSeries" :series="trendSeries" size="sm" />
+      <DashboardSourceList
+        v-if="(props.vm.data.sourceCount ?? 0) > 0"
+        :count="props.vm.data.sourceCount ?? 0"
+        :detail-href="props.vm.data.href"
+      />
     </NuxtLink>
   </UiCard>
 </template>

@@ -215,7 +215,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **F43** Profile Entreprise & Projets UI — UI de F11 + F12-profile-projets
 
 ### Phase D — Tableaux de bord & visualisations métier
-- **F44** Dashboard PME — UI de F32 (cartes scores, carbone, crédit, candidatures, plan, attestations)
+- **F44** Dashboard PME — UI de F32 (cartes scores, carbone, crédit, candidatures, plan, attestations) — `ready` (specs/044-dashboard-pme-ui/)
 - **F45** Plan d'action ESG UI — UI de F31 (timeline horizontal, cards étapes, drawer édition)
 - **F46** Scoring ESG visualisations — UI de F23 (radar, drilldown, multi-référentiels)
 - **F47** Empreinte carbone UI — UI de F28 (Scope 1/2/3 donut, drilldown, comparateur facteurs)

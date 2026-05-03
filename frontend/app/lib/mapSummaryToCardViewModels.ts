@@ -34,6 +34,8 @@ export interface CarbonCardData {
   trend: { quarter: string; tco2e: string }[]
   computedAt: Date
   href: string
+  /** Nb sources documentaires utilisées pour le calcul (TODO post-MVP F32). */
+  sourceCount?: number
 }
 
 export interface CreditCardData {

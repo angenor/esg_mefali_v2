@@ -7,6 +7,7 @@ import VizRadarChart from "~/components/viz/VizRadarChart.vue"
 import CardSkeleton from "./CardSkeleton.vue"
 import CardErrorState from "./CardErrorState.vue"
 import EmptyCardCTA from "./EmptyCardCTA.vue"
+import DashboardSourceList from "./DashboardSourceList.vue"
 import { useT } from "~/composables/useT"
 import type { CardKind, ScoringCardData } from "~/lib/mapSummaryToCardViewModels"
 
@@ -63,10 +64,12 @@ const radarSeries = computed(() => {
       />
       <VizRadarChart v-if="radarSeries" :series="radarSeries" size="sm" />
       <p class="card-meta">
-        {{ props.vm.data.referentielCode }} v{{ props.vm.data.referentielVersion }} ·
-        <span data-testid="source-count">
-          {{ t("dashboard.cards.scoring.sources", { count: props.vm.data.sourceCount }) }}
-        </span>
+        {{ props.vm.data.referentielCode }} v{{ props.vm.data.referentielVersion }}
+        <span class="card-meta__sep">·</span>
+        <DashboardSourceList
+          :count="props.vm.data.sourceCount"
+          :detail-href="props.vm.data.href"
+        />
       </p>
     </NuxtLink>
   </UiCard>

@@ -17,6 +17,9 @@ import CardCredit from "~/components/dashboard/CardCredit.vue"
 import CardCandidatures from "~/components/dashboard/CardCandidatures.vue"
 import CardRapports from "~/components/dashboard/CardRapports.vue"
 import CardActionPlan from "~/components/dashboard/CardActionPlan.vue"
+import ExportButton from "~/components/dashboard/ExportButton.vue"
+import CardIntermediaires from "~/components/dashboard/CardIntermediaires.vue"
+import { useProjetsStore } from "~/stores/projets"
 
 definePageMeta({
   layout: "default",
@@ -39,8 +42,11 @@ const raisonSociale = computed<string>(
   () => entrepriseStore.data?.raison_sociale ?? "",
 )
 
+const projetsStore = useProjetsStore()
+const hasProjet = computed<boolean>(() => projetsStore.activeList.length > 0)
+
 // Branchement dashboard summary (fetch + polling + sync EventBus).
-const { vms, summary } = useDashboardSummary({ hasProjet: false })
+const { vms, summary } = useDashboardSummary({ hasProjet: hasProjet.value })
 
 const lastDiagnosticAt = computed<Date | null>(() => {
   const scores = summary.value?.scores ?? []
@@ -57,6 +63,10 @@ onMounted(async () => {
   if (entrepriseStore.data === null && typeof entrepriseStore.loadAll === "function") {
     await entrepriseStore.loadAll().catch(() => {})
   }
+  // Charge la liste de projets pour décider d'afficher la carte intermédiaires.
+  if (typeof projetsStore.loadList === "function") {
+    await projetsStore.loadList().catch(() => {})
+  }
   completionLoaded.value = true
   await startIfPending()
 })
@@ -65,7 +75,10 @@ onMounted(async () => {
 <template>
   <EmptyStateLanding v-if="showEmptyState" />
   <section v-else class="dashboard-page">
-    <WelcomeStrip :raison-sociale="raisonSociale" :last-diagnostic-at="lastDiagnosticAt" />
+    <header class="dashboard-page__header">
+      <WelcomeStrip :raison-sociale="raisonSociale" :last-diagnostic-at="lastDiagnosticAt" />
+      <ExportButton />
+    </header>
     <DashboardGrid>
       <CardScoring :vm="vms.scoring" />
       <CardCarbon :vm="vms.carbon" />
@@ -73,6 +86,7 @@ onMounted(async () => {
       <CardCandidatures :vm="vms.candidatures" />
       <CardRapports :vm="vms.rapports" />
       <CardActionPlan :vm="vms.actionPlan" />
+      <CardIntermediaires v-if="hasProjet" />
     </DashboardGrid>
     <FullscreenTourStep />
   </section>
@@ -83,5 +97,13 @@ onMounted(async () => {
   padding: 1.5rem 1rem;
   max-width: 1400px;
   margin: 0 auto;
+}
+.dashboard-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 </style>

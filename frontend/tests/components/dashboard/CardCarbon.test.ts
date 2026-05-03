@@ -68,4 +68,29 @@ describe("CardCarbon", () => {
     })
     expect(wrapper.find('a[href="/carbone"]').exists()).toBe(true)
   })
+
+  // F44 T053 [US6] — Source pin présent quand sourceCount > 0, ouvre popover.
+  it("filled avec sourceCount > 0 → DashboardSourceList rendu et cliquable", async () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(CardCarbon, {
+      props: {
+        vm: {
+          kind: "filled",
+          data: {
+            totalAnnualTco2e: "12.5",
+            year: 2026,
+            trend: [],
+            computedAt: new Date(),
+            href: "/carbone",
+            sourceCount: 3,
+          },
+        },
+      },
+      global: { stubs: STUBS },
+    })
+    const pin = wrapper.find('[data-testid="source-pin"]')
+    expect(pin.exists()).toBe(true)
+    await pin.trigger("click")
+    expect(wrapper.find('[data-testid="source-list-pop"]').exists()).toBe(true)
+  })
 })

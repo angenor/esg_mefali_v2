@@ -62,6 +62,13 @@ export const useAuthStore = defineStore("auth", {
         } catch {
           // store non disponible (SSR / hors layout PME)
         }
+        // F44 T067 — purge le store dashboard sur logout (cloisonnement strict, FR-019).
+        try {
+          const { useDashboardStore } = await import("~/stores/dashboard")
+          useDashboardStore().reset()
+        } catch {
+          // store non disponible
+        }
         await navigateTo("/login")
       }
     },

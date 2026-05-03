@@ -59,4 +59,41 @@ describe("CardRapports", () => {
     })
     expect(wrapper.find('a[href="/rapports"]').exists()).toBe(true)
   })
+
+  // F44 T048 [US5] — ≥ 2 attestations actives : QR rendus + lien /verify/{publicId}.
+  it("≥ 2 attestations actives → 2 QR rendus avec liens /verify/{publicId}", async () => {
+    const wrapper = mount(CardRapports, {
+      props: {
+        vm: {
+          kind: "filled",
+          data: {
+            recentRapports: [],
+            activeAttestations: [
+              {
+                id: "att1",
+                publicId: "pub-1",
+                generatedAt: new Date("2026-04-20"),
+                validUntil: new Date("2027-04-20"),
+                verifyHref: "/verify/pub-1",
+              },
+              {
+                id: "att2",
+                publicId: "pub-2",
+                generatedAt: new Date("2026-04-21"),
+                validUntil: new Date("2027-04-21"),
+                verifyHref: "/verify/pub-2",
+              },
+            ],
+            href: "/rapports",
+          },
+        },
+      },
+      global: { stubs: STUBS },
+    })
+    await flushPromises()
+    const qrLinks = wrapper.findAll('[data-testid="attestation-qr"]')
+    expect(qrLinks.length).toBe(2)
+    expect(qrLinks[0]?.attributes("data-href")).toBe("/verify/pub-1")
+    expect(qrLinks[1]?.attributes("data-href")).toBe("/verify/pub-2")
+  })
 })

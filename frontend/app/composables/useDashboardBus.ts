@@ -24,6 +24,24 @@ function getEmitter(): Emitter<DashboardEvents> {
   return singleton
 }
 
+// Registre global anti-loop : ids des mutations locales à ignorer pendant TTL (5 s).
+const LOCAL_MUTATION_TTL_MS = 5_000
+const localMutationIds = new Map<string, number>()
+
+export function trackLocalMutation(id: string): void {
+  localMutationIds.set(id, Date.now())
+}
+
+export function isLocalMutation(id: string): boolean {
+  const ts = localMutationIds.get(id)
+  if (ts === undefined) return false
+  if (Date.now() - ts > LOCAL_MUTATION_TTL_MS) {
+    localMutationIds.delete(id)
+    return false
+  }
+  return true
+}
+
 export interface UseDashboardBus {
   on<K extends DashboardEventName>(
     type: K,
@@ -54,4 +72,5 @@ export function useDashboardBus(): UseDashboardBus {
 
 export function __resetDashboardBus(): void {
   singleton = null
+  localMutationIds.clear()
 }

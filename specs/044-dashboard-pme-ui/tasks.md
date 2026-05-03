@@ -102,15 +102,15 @@
 
 ### Tests pour User Story 2
 
-- [ ] T033 [P] [US2] Créer `frontend/tests/components/dashboard/CardActionPlan.test.ts` — vérifie : 3 étapes max affichées, ordre tri (priorité haute d'abord puis horizon ASC), checkbox cliquable, optimistic update (case grisée + spinner), succès → callback `onComplete`, erreur 5xx → revert + toast (mock toast).
-- [ ] T034 [P] [US2] Créer `frontend/app/composables/__tests__/useActionStepToggle.test.ts` (composable interne au CardActionPlan) — vérifie : appel `PATCH /me/action-plan/steps/{id}` avec body `{ status: 'done' }`, traque l'id en mémoire 5 s pour anti-boucle, émet event `action_step:completed` sur EventBus avec `source: 'dashboard'`, déclenche `store.invalidate('next_actions')` + `store.fetchSummary({ scope: ['next_actions'] })`.
-- [ ] T035 [P] [US2] Créer `frontend/tests/e2e/dashboard-action-plan-toggle.spec.ts` — scénario S3 du quickstart.
+- [X] T033 [P] [US2] Créer `frontend/tests/components/dashboard/CardActionPlan.test.ts` — vérifie : 3 étapes max affichées, ordre tri (priorité haute d'abord puis horizon ASC), checkbox cliquable, optimistic update (case grisée + spinner), succès → callback `onComplete`, erreur 5xx → revert + toast (mock toast).
+- [X] T034 [P] [US2] Créer `frontend/app/composables/__tests__/useActionStepToggle.test.ts` (composable interne au CardActionPlan) — vérifie : appel `PATCH /me/action-plan/steps/{id}` avec body `{ status: 'done' }`, traque l'id en mémoire 5 s pour anti-boucle, émet event `action_step:completed` sur EventBus avec `source: 'dashboard'`, déclenche `store.invalidate('next_actions')` + `store.fetchSummary({ scope: ['next_actions'] })`.
+- [X] T035 [P] [US2] Créer `frontend/tests/e2e/dashboard-action-plan-toggle.spec.ts` — scénario S3 du quickstart.
 
 ### Implémentation User Story 2
 
-- [ ] T036 [US2] Implémenter `frontend/app/composables/useActionStepToggle.ts` — appelle PATCH, gère optimistic update, émet event, traque l'id 5 s. Dépend de T010. Doit faire passer T034.
-- [ ] T037 [US2] Implémenter `frontend/app/components/dashboard/CardActionPlan.vue` — voir C-COMP-3. Utilise `useActionStepToggle`, gère revert visuel sur erreur via `useToast`. Dépend de T036. Doit faire passer T033.
-- [ ] T038 [US2] Câbler `CardActionPlan` dans `pages/dashboard.vue` (remplacer le placeholder posé en T031) — passer le VM `vms.actionPlan`. Doit faire passer T035.
+- [X] T036 [US2] Implémenter `frontend/app/composables/useActionStepToggle.ts` — appelle PATCH, gère optimistic update, émet event, traque l'id 5 s. Dépend de T010. Doit faire passer T034.
+- [X] T037 [US2] Implémenter `frontend/app/components/dashboard/CardActionPlan.vue` — voir C-COMP-3. Utilise `useActionStepToggle`, gère revert visuel sur erreur via `useToast`. Dépend de T036. Doit faire passer T033.
+- [X] T038 [US2] Câbler `CardActionPlan` dans `pages/dashboard.vue` (remplacer le placeholder posé en T031) — passer le VM `vms.actionPlan`. Doit faire passer T035.
 
 **Checkpoint US2**: La 7ᵉ user story du flux quotidien (cocher une étape sans changer de page) fonctionne. Le mécanisme de mutation locale + invalidation + sync chat est éprouvé.
 
@@ -124,13 +124,13 @@
 
 ### Tests pour User Story 3
 
-- [ ] T039 [P] [US3] Étendre `frontend/app/lib/__tests__/mapSummaryToCardViewModels.test.ts` (déjà créé en T007) — ajouter un test paramétré "compte vierge" qui valide pour chaque carte le label CTA et la href cible exacte (cf. data-model § règles de mapping).
-- [ ] T040 [P] [US3] Créer `frontend/tests/e2e/dashboard-empty-account.spec.ts` — scénario S2 du quickstart, assertion stricte "aucune carte n'affiche le caractère '0' ou '—' isolé".
+- [X] T039 [P] [US3] Étendre `frontend/app/lib/__tests__/mapSummaryToCardViewModels.test.ts` (déjà créé en T007) — ajouter un test paramétré "compte vierge" qui valide pour chaque carte le label CTA et la href cible exacte (cf. data-model § règles de mapping).
+- [X] T040 [P] [US3] Créer `frontend/tests/e2e/dashboard-empty-account.spec.ts` — scénario S2 du quickstart, assertion stricte "aucune carte n'affiche le caractère '0' ou '—' isolé".
 
 ### Implémentation User Story 3
 
-- [ ] T041 [US3] Vérifier que `mapSummaryToCardViewModels.ts` (T009) émet bien `kind: 'empty'` avec les bonnes hrefs par carte. Si T009 omettait des cas, compléter : Scoring → `/scoring`, Carbone → `/carbone`, Crédit → `/credit-score`, Candidatures → `/candidatures`, Rapports → `/rapports`, Plan d'action → `/plan-action`. Doit faire passer T039.
-- [ ] T042 [US3] Vérifier `EmptyCardCTA.vue` (T015) : affiche message + CTA-bouton, ne rend jamais "0" ou "—". Ajuster styles si besoin pour différencier visuellement de l'état "filled" (icône d'invitation, fond plus clair). Doit faire passer T040.
+- [X] T041 [US3] Vérifier que `mapSummaryToCardViewModels.ts` (T009) émet bien `kind: 'empty'` avec les bonnes hrefs par carte. Si T009 omettait des cas, compléter : Scoring → `/scoring`, Carbone → `/carbone`, Crédit → `/credit-score`, Candidatures → `/candidatures`, Rapports → `/rapports`, Plan d'action → `/plan-action`. Doit faire passer T039.
+- [X] T042 [US3] Vérifier `EmptyCardCTA.vue` (T015) : affiche message + CTA-bouton, ne rend jamais "0" ou "—". Ajuster styles si besoin pour différencier visuellement de l'état "filled" (icône d'invitation, fond plus clair). Doit faire passer T040.
 
 **Checkpoint US3**: Primo-utilisateurs voient un dashboard accueillant et orientant. Aucune carte vide anxiogène.
 
@@ -144,14 +144,14 @@
 
 ### Tests pour User Story 4
 
-- [ ] T043 [P] [US4] Créer `frontend/tests/components/dashboard/ExportButton.test.ts` — vérifie disabled pendant download, toast succès/erreur, événement `exported` émis.
-- [ ] T044 [P] [US4] Créer `frontend/tests/e2e/dashboard-export.spec.ts` — scénario S4 du quickstart (download + contenu JSON + cloisonnement compte).
-- [ ] T045 [P] [US4] Créer `frontend/tests/e2e/dashboard-export-double-click.spec.ts` — vérifier qu'un double-clic rapide ne génère qu'un seul download (FR-021).
+- [X] T043 [P] [US4] Créer `frontend/tests/components/dashboard/ExportButton.test.ts` — vérifie disabled pendant download, toast succès/erreur, événement `exported` émis.
+- [X] T044 [P] [US4] Créer `frontend/tests/e2e/dashboard-export.spec.ts` — scénario S4 du quickstart (download + contenu JSON + cloisonnement compte).
+- [X] T045 [P] [US4] Créer `frontend/tests/e2e/dashboard-export-double-click.spec.ts` — vérifier qu'un double-clic rapide ne génère qu'un seul download (FR-021).
 
 ### Implémentation User Story 4
 
-- [ ] T046 [P] [US4] Implémenter `frontend/app/components/dashboard/ExportButton.vue` — voir C-COMP-7. Utilise `useDataExport()` (T011). Doit faire passer T043.
-- [ ] T047 [US4] Intégrer `<ExportButton>` dans `pages/dashboard.vue` — placement haut-droite (au-dessus de la grille ou dans le bandeau, à droite). Doit faire passer T044 et T045.
+- [X] T046 [P] [US4] Implémenter `frontend/app/components/dashboard/ExportButton.vue` — voir C-COMP-7. Utilise `useDataExport()` (T011). Doit faire passer T043.
+- [X] T047 [US4] Intégrer `<ExportButton>` dans `pages/dashboard.vue` — placement haut-droite (au-dessus de la grille ou dans le bandeau, à droite). Doit faire passer T044 et T045.
 
 **Checkpoint US4**: Conformité RGPD art. 20 / UEMOA 20/2010 (portabilité) accessible en 1 clic depuis la page d'accueil.
 
@@ -165,13 +165,13 @@
 
 ### Tests pour User Story 5
 
-- [ ] T048 [P] [US5] Étendre `frontend/tests/components/dashboard/CardRapports.test.ts` (T023) — ajouter un cas "≥ 2 attestations actives" : QR rendus, lien `/verify/{publicId}` exact, attestation expirée filtrée, attestation révoquée jamais affichée.
-- [ ] T049 [P] [US5] Créer un test unitaire `frontend/app/lib/__tests__/mapSummaryToCardViewModels.test.ts` (en complément T007) couvrant le filtre attestations actives (`valid_until > now && revoked_at == null`) avec faux Now.
+- [X] T048 [P] [US5] Étendre `frontend/tests/components/dashboard/CardRapports.test.ts` (T023) — ajouter un cas "≥ 2 attestations actives" : QR rendus, lien `/verify/{publicId}` exact, attestation expirée filtrée, attestation révoquée jamais affichée.
+- [X] T049 [P] [US5] Créer un test unitaire `frontend/app/lib/__tests__/mapSummaryToCardViewModels.test.ts` (en complément T007) couvrant le filtre attestations actives (`valid_until > now && revoked_at == null`) avec faux Now.
 
 ### Implémentation User Story 5
 
-- [ ] T050 [US5] S'assurer que `CardRapports.vue` (T030) intègre le sous-bloc attestations avec QR (via `qrcode-vue3` ajouté en T004). Lien `<NuxtLink to="/verify/{publicId}">`. Doit faire passer T048.
-- [ ] T051 [US5] S'assurer que l'adapter `mapSummaryToCardViewModels.ts` (T009/T041) filtre correctement les attestations expirées et révoquées. Doit faire passer T049.
+- [X] T050 [US5] S'assurer que `CardRapports.vue` (T030) intègre le sous-bloc attestations avec QR (via `qrcode-vue3` ajouté en T004). Lien `<NuxtLink to="/verify/{publicId}">`. Doit faire passer T048.
+- [X] T051 [US5] S'assurer que l'adapter `mapSummaryToCardViewModels.ts` (T009/T041) filtre correctement les attestations expirées et révoquées. Doit faire passer T049.
 
 **Checkpoint US5**: Les preuves vérifiables (sortie monétisable de la plateforme) sont visibles dès l'accueil et accessibles en lecture publique.
 
@@ -185,12 +185,12 @@
 
 ### Tests pour User Story 6
 
-- [ ] T052 [P] [US6] Étendre `frontend/tests/components/dashboard/CardScoring.test.ts` (T019) — vérifier présence de `<VizSourcePin :count="sourceCount">`, le clic ouvre un popover/modal listant les sources (mock).
-- [ ] T053 [P] [US6] Idem pour `CardCarbon.test.ts` (T020).
+- [X] T052 [P] [US6] Étendre `frontend/tests/components/dashboard/CardScoring.test.ts` (T019) — vérifier présence de `<VizSourcePin :count="sourceCount">`, le clic ouvre un popover/modal listant les sources (mock).
+- [X] T053 [P] [US6] Idem pour `CardCarbon.test.ts` (T020).
 
 ### Implémentation User Story 6
 
-- [ ] T054 [US6] Vérifier la présence de `<VizSourcePin>` dans `CardScoring.vue` (T026) et `CardCarbon.vue` (T027). Si l'API de `<VizSourcePin>` (livrée par F40) ne supporte pas l'ouverture d'une liste, ajouter un wrapper `<DashboardSourceList>` léger (composant) qui consomme l'event `pin:click`. Doit faire passer T052 et T053.
+- [X] T054 [US6] Vérifier la présence de `<VizSourcePin>` dans `CardScoring.vue` (T026) et `CardCarbon.vue` (T027). Si l'API de `<VizSourcePin>` (livrée par F40) ne supporte pas l'ouverture d'une liste, ajouter un wrapper `<DashboardSourceList>` léger (composant) qui consomme l'event `pin:click`. Doit faire passer T052 et T053.
 
 **Note** : la donnée `sources_by_indicator` ou équivalent doit être présente dans `summary.scores[*]` / `summary.carbon[*]`. Si F32 ne la fournit pas (à vérifier en T0), dégrader proprement (afficher juste le compte de sources sans liste détaillée et tracer un TODO post-MVP plutôt que d'inventer un endpoint backend).
 
@@ -206,13 +206,13 @@
 
 ### Tests pour User Story 7
 
-- [ ] T055 [P] [US7] Créer `frontend/tests/components/dashboard/CardIntermediaires.test.ts` — vérifie : composant non monté si `hasProjet = false`, fetch lazy `/me/matching/recommendations?limit=3`, états loading/empty/filled/error, pins rendus dans `<VizLeafletMap>`, lien `/matching`.
-- [ ] T056 [P] [US7] Créer `frontend/tests/e2e/dashboard-card-failure-isolation.spec.ts` — vérifie qu'une erreur 5xx sur `/me/matching/recommendations` n'affecte pas les 6 cartes principales (FR-020 / SC-010).
+- [X] T055 [P] [US7] Créer `frontend/tests/components/dashboard/CardIntermediaires.test.ts` — vérifie : composant non monté si `hasProjet = false`, fetch lazy `/me/matching/recommendations?limit=3`, états loading/empty/filled/error, pins rendus dans `<VizLeafletMap>`, lien `/matching`.
+- [X] T056 [P] [US7] Créer `frontend/tests/e2e/dashboard-card-failure-isolation.spec.ts` — vérifie qu'une erreur 5xx sur `/me/matching/recommendations` n'affecte pas les 6 cartes principales (FR-020 / SC-010).
 
 ### Implémentation User Story 7
 
-- [ ] T057 [P] [US7] Implémenter `frontend/app/components/dashboard/CardIntermediaires.vue` — voir C-COMP-3 spécifique. Utilise `<VizLeafletMap>` (F40) avec `disable-pan` et `height="160px"`. Lazy-fetch via `useFetch('/me/matching/recommendations?limit=3', { lazy: true, server: false })`. Doit faire passer T055.
-- [ ] T058 [US7] Intégrer `<CardIntermediaires>` dans `pages/dashboard.vue` avec garde-fou `v-if="hasProjet"` (lit `useProjetsStore().count > 0` ou équivalent existant côté F43). Doit faire passer T056.
+- [X] T057 [P] [US7] Implémenter `frontend/app/components/dashboard/CardIntermediaires.vue` — voir C-COMP-3 spécifique. Utilise `<VizLeafletMap>` (F40) avec `disable-pan` et `height="160px"`. Lazy-fetch via `useFetch('/me/matching/recommendations?limit=3', { lazy: true, server: false })`. Doit faire passer T055.
+- [X] T058 [US7] Intégrer `<CardIntermediaires>` dans `pages/dashboard.vue` avec garde-fou `v-if="hasProjet"` (lit `useProjetsStore().count > 0` ou équivalent existant côté F43). Doit faire passer T056.
 
 **Checkpoint US7**: La découverte d'opportunités de financement est amorcée depuis l'accueil sans surcharger le compte vierge.
 
@@ -226,12 +226,12 @@
 
 ### Tests pour User Story 8
 
-- [ ] T059 [P] [US8] Étendre `frontend/app/composables/__tests__/useDashboardSummary.test.ts` (T006) avec un cas "polling déclenche fetch après 60 s simulés" (vitest fake timers).
-- [ ] T060 [P] [US8] Créer `frontend/tests/e2e/dashboard-chat-sync.spec.ts` — scénario S5 cas A : émission d'event chat dans le même onglet → carte ESG mise à jour en < 2 s (mock backend pour renvoyer la nouvelle valeur).
+- [X] T059 [P] [US8] Étendre `frontend/app/composables/__tests__/useDashboardSummary.test.ts` (T006) avec un cas "polling déclenche fetch après 60 s simulés" (vitest fake timers).
+- [X] T060 [P] [US8] Créer `frontend/tests/e2e/dashboard-chat-sync.spec.ts` — scénario S5 cas A : émission d'event chat dans le même onglet → carte ESG mise à jour en < 2 s (mock backend pour renvoyer la nouvelle valeur).
 
 ### Implémentation User Story 8
 
-- [ ] T061 [US8] Vérifier que `useDashboardSummary.ts` (T010) implémente bien : (a) interval 60 s + visibility API (déjà couvert T006), (b) abonnement aux 9 events de la table EVENT_TO_BLOCK_MAP (T003), (c) garde-fou anti-boucle 5 s. Si manquant, compléter. Doit faire passer T059 et T060.
+- [X] T061 [US8] Vérifier que `useDashboardSummary.ts` (T010) implémente bien : (a) interval 60 s + visibility API (déjà couvert T006), (b) abonnement aux 9 events de la table EVENT_TO_BLOCK_MAP (T003), (c) garde-fou anti-boucle 5 s. Si manquant, compléter. Doit faire passer T059 et T060.
 
 **Checkpoint US8**: La cohérence chat ↔ dashboard est garantie en temps quasi-réel sur le même onglet, et en < 90 s entre onglets/sessions.
 
@@ -241,15 +241,15 @@
 
 **Purpose**: A11y, perf, SSR squelettes, robustesse, qualité code, documentation.
 
-- [ ] T062 [P] Audit a11y avec axe-core sur `/dashboard` plein et vide — corriger toutes violations AA (titres `<h2>` par carte, `aria-busy` sur cartes en chargement, `role="alert"` sur erreurs, focus visible sur tous les liens, contrast ratios).
-- [ ] T063 [P] Optimiser SSR : valider que les squelettes sont rendus côté serveur (Lighthouse mobile sur `/dashboard` avec compte plein → LCP < 1,5 s). Si KO, activer `useFetch` côté serveur pour le premier fetch summary (la session middleware permet l'auth côté serveur). Cf. research R9.
-- [ ] T064 [P] Vérifier performance scroll mobile : ouvrir devtools mobile (375 px), scroller la grille empilée, profiler → 60 fps maintenu (SC-008). Optimiser si nécessaire (lazy-load mini-charts hors viewport via `IntersectionObserver`).
-- [ ] T065 [P] Anti-overflow : vérifier sur viewport 320×568 (le plus petit raisonnable) qu'aucune carte ne déborde horizontalement ; ajuster `min-w-0` / troncature où nécessaire.
-- [ ] T066 [P] Compléter `frontend/app/locales/fr.ts` si des clés ont été oubliées pendant l'implémentation des cartes — relancer les tests composants pour confirmer.
-- [ ] T067 [P] Vérifier que `useDashboardStore.reset()` est appelé sur logout (compléter `frontend/app/stores/auth.ts` si l'instruction n'y figure pas) — cloisonnement strict entre comptes, FR-019.
-- [ ] T068 Lancer `pnpm lint` et corriger toute violation introduite ; lancer `pnpm vitest run` et `pnpm playwright test` complets — tout doit passer (couverture ≥ 80 % sur le code F44 nouveau).
-- [ ] T069 [P] Mettre à jour `docs_et_brouillons/features/00-INDEX.md` : passer F44 de `draft` à `ready` (ou statut équivalent du dépôt) avec lien vers `specs/044-dashboard-pme-ui/`.
-- [ ] T070 Tester manuellement les 7 scénarios du `quickstart.md` en env local et reporter dans une checklist `specs/044-dashboard-pme-ui/quickstart-validation.md` (créer le fichier).
+- [X] T062 [P] Audit a11y avec axe-core sur `/dashboard` plein et vide — corriger toutes violations AA (titres `<h2>` par carte, `aria-busy` sur cartes en chargement, `role="alert"` sur erreurs, focus visible sur tous les liens, contrast ratios).
+- [X] T063 [P] Optimiser SSR : valider que les squelettes sont rendus côté serveur (Lighthouse mobile sur `/dashboard` avec compte plein → LCP < 1,5 s). Si KO, activer `useFetch` côté serveur pour le premier fetch summary (la session middleware permet l'auth côté serveur). Cf. research R9.
+- [X] T064 [P] Vérifier performance scroll mobile : ouvrir devtools mobile (375 px), scroller la grille empilée, profiler → 60 fps maintenu (SC-008). Optimiser si nécessaire (lazy-load mini-charts hors viewport via `IntersectionObserver`).
+- [X] T065 [P] Anti-overflow : vérifier sur viewport 320×568 (le plus petit raisonnable) qu'aucune carte ne déborde horizontalement ; ajuster `min-w-0` / troncature où nécessaire.
+- [X] T066 [P] Compléter `frontend/app/locales/fr.ts` si des clés ont été oubliées pendant l'implémentation des cartes — relancer les tests composants pour confirmer.
+- [X] T067 [P] Vérifier que `useDashboardStore.reset()` est appelé sur logout (compléter `frontend/app/stores/auth.ts` si l'instruction n'y figure pas) — cloisonnement strict entre comptes, FR-019.
+- [X] T068 Lancer `pnpm lint` et corriger toute violation introduite ; lancer `pnpm vitest run` et `pnpm playwright test` complets — tout doit passer (couverture ≥ 80 % sur le code F44 nouveau).
+- [X] T069 [P] Mettre à jour `docs_et_brouillons/features/00-INDEX.md` : passer F44 de `draft` à `ready` (ou statut équivalent du dépôt) avec lien vers `specs/044-dashboard-pme-ui/`.
+- [X] T070 Tester manuellement les 7 scénarios du `quickstart.md` en env local et reporter dans une checklist `specs/044-dashboard-pme-ui/quickstart-validation.md` (créer le fichier).
 
 **Checkpoint Polish**: Feature livrable, conforme constitution (P1, P2, P5, P8 vérifiés), conforme spec quality checklist.
 

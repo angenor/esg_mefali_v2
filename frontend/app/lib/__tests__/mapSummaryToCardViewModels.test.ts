@@ -230,6 +230,70 @@ describe("mapSummaryToCardViewModels", () => {
     expect(vmsAvec.intermediaires?.kind).toBe("loading")
   })
 
+  // F44 T039 [US3] — Vérifie pour chaque carte le label CTA et la href cible exacte sur compte vierge.
+  it.each([
+    ["scoring", "/scoring", "dashboard.cards.scoring.empty_cta"],
+    ["carbon", "/carbone", "dashboard.cards.carbon.empty_cta"],
+    ["credit", "/credit-score", "dashboard.cards.credit.empty_cta"],
+    ["candidatures", "/candidatures", "dashboard.cards.candidatures.empty_cta"],
+    ["rapports", "/rapports", "dashboard.cards.rapports.empty_cta"],
+    ["actionPlan", "/plan-action", "dashboard.cards.action_plan.empty_cta"],
+  ] as const)(
+    "compte vierge → carte %s emit empty avec href=%s + label clé i18n %s",
+    (cardKey, expectedHref, expectedLabel) => {
+      const vms = mapSummaryToCardViewModels(EMPTY_SUMMARY, baseOpts)
+      const vm = vms[cardKey]
+      expect(vm.kind).toBe("empty")
+      if (vm.kind === "empty") {
+        expect(vm.cta.href).toBe(expectedHref)
+        expect(vm.cta.label).toBe(expectedLabel)
+      }
+    },
+  )
+
+  // F44 T049 [US5] — Filtre attestations actives avec faux Now (révoquée + expirée).
+  it("attestations : filtre révoquée et expirée selon `now` injecté", () => {
+    const summary: DashboardSummaryOut = {
+      ...EMPTY_SUMMARY,
+      attestations: {
+        active: 2,
+        revoked: 1,
+        recent: [
+          {
+            id: "a1",
+            public_id: "pub-active",
+            generated_at: "2026-01-01T00:00:00Z",
+            valid_until: "2026-12-31T23:59:59Z",
+            revoked_at: null,
+          },
+          {
+            id: "a2",
+            public_id: "pub-expired",
+            generated_at: "2025-01-01T00:00:00Z",
+            valid_until: "2025-06-01T00:00:00Z",
+            revoked_at: null,
+          },
+          {
+            id: "a3",
+            public_id: "pub-revoked",
+            generated_at: "2026-02-01T00:00:00Z",
+            valid_until: "2027-02-01T00:00:00Z",
+            revoked_at: "2026-04-15T00:00:00Z",
+          },
+        ],
+      },
+      rapports: { total: 1, recent: [{ id: "r0", entity_type: "scoring", entity_id: "x", referentiels: ["GCF"], language: "fr", generated_at: "2026-01-01T00:00:00Z", title: "T", download_href: "/rapports/r0.pdf" }] },
+    }
+    const vms = mapSummaryToCardViewModels(summary, {
+      ...baseOpts,
+      now: new Date("2026-06-01T00:00:00Z"),
+    })
+    if (vms.rapports.kind === "filled") {
+      const ids = vms.rapports.data.activeAttestations.map((a) => a.publicId)
+      expect(ids).toEqual(["pub-active"])
+    }
+  })
+
   it("candidatures : limite à 3 récentes et résout label", () => {
     const summary: DashboardSummaryOut = {
       ...FILLED_SUMMARY,
