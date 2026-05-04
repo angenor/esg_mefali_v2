@@ -1,6 +1,7 @@
 test cette feature avec `agent-browser --headed`
 
 `Playwright en mode --headed`
+e2e-runner(E2E headed test F48 credit-score)
 
 `claude --dangerously-skip-permissions`
 
