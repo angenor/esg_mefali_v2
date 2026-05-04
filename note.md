@@ -1,5 +1,7 @@
 test cette feature avec `agent-browser --headed`
 
+`Playwright en mode --headed`
+
 `claude --dangerously-skip-permissions`
 
 

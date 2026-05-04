@@ -1,4 +1,7 @@
 // F44 T019 — Tests CardScoring (loading/empty/filled/error).
+// F46 T019 — assertions additionnelles : NuxtLink to="/scoring" + aucun $fetch direct.
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import { mount } from "@vue/test-utils"
 import { createPinia, setActivePinia } from "pinia"
@@ -85,6 +88,40 @@ describe("CardScoring", () => {
     expect(pin.exists()).toBe(true)
     await pin.trigger("click")
     expect(wrapper.find('[data-testid="source-list-pop"]').exists()).toBe(true)
+  })
+
+  // F46 T019 — assertions additionnelles.
+  it("F46 — filled → expose un lien 'Voir le scoring complet' vers /scoring", () => {
+    withPinia()
+    const wrapper = mount(CardScoring, {
+      props: {
+        vm: {
+          kind: "filled",
+          data: {
+            scoreGlobal: 62,
+            byAxis: { e: 60, s: 65, g: 70 },
+            referentielCode: "GCF",
+            referentielVersion: 2,
+            computedAt: new Date(),
+            sourceCount: 4,
+            href: "/scoring",
+          },
+        },
+      },
+      global: { stubs: STUBS },
+    })
+    const cta = wrapper.find('[data-testid="card-scoring-cta"]')
+    expect(cta.exists()).toBe(true)
+    expect(cta.attributes("href")).toBe("/scoring")
+  })
+
+  it("F46 — fichier source ne contient aucun $fetch direct", () => {
+    const path = resolve(
+      __dirname,
+      "../../../app/components/dashboard/CardScoring.vue",
+    )
+    const content = readFileSync(path, "utf-8")
+    expect(content).not.toMatch(/\$fetch\b/)
   })
 
   it("error → affiche message + bouton retry", async () => {

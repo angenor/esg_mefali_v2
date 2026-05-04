@@ -55,3 +55,26 @@ class ScoreListOut(BaseModel):
     entity_type: str
     entity_id: uuid.UUID
     scores: list[ScoreSummaryOut] = Field(default_factory=list)
+
+
+# ---- F46 — endpoint history --------------------------------------------------
+
+
+class ScoreHistoryEntry(BaseModel):
+    """Une entrée d'historique de calcul (lecture pure ; pas d'audit)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    score_calculation_id: uuid.UUID
+    computed_at: datetime
+    score_global: float | None = None
+    referentiel_version: int
+
+
+class ScoreHistoryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    entity_type: str
+    entity_id: uuid.UUID
+    referentiel_code: str
+    entries: list[ScoreHistoryEntry] = Field(default_factory=list)

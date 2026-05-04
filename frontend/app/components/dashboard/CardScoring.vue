@@ -71,6 +71,10 @@ const radarSeries = computed(() => {
           :detail-href="props.vm.data.href"
         />
       </p>
+      <!-- F46 T020 — CTA explicite vers la page complète /scoring (constitution P2). -->
+      <NuxtLink to="/scoring" class="card-cta" data-testid="card-scoring-cta">
+        {{ t("scoring.buttons.viewFull") }}
+      </NuxtLink>
     </NuxtLink>
   </UiCard>
 </template>
@@ -92,5 +96,16 @@ const radarSeries = computed(() => {
   font-size: 0.75rem;
   color: var(--color-text-muted, #666);
   margin: 0;
+}
+.card-cta {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary, #0d6efd);
+  text-decoration: none;
+}
+.card-cta:hover {
+  text-decoration: underline;
 }
 </style>
