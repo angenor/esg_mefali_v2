@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/046-scoring-esg-ui/plan.md
+specs/047-empreinte-carbone-ui/plan.md
 <!-- SPECKIT END -->
 
 The Spec Kit "current feature" is tracked in `.specify/feature.json` (`feature_directory`). When unsure which feature is active, read that file first — it points to the spec/plan/tasks under `specs/`.

@@ -64,9 +64,7 @@ def test_reset_invalidates_prior_session(client, unique_email):
     # Ici on vérifie que le mécanisme tokens_invalidated_at fonctionne via une requête /me
     # post-reset effectuée avec les anciens cookies.
 
-    # Réutilise les anciens cookies après un reset_password() simulé directement par la DB :
-    from app.auth.service import consume_password_reset
-
+    # Réutilise les anciens cookies après un reset_password() simulé directement par la DB.
     # Génère un token clair fictif pour ce test : on récupère via insert direct
     # — alternative : aller chercher dans email_sender console output.
     # Pour ne pas casser le test, on fait passer la session par invalidation explicite.

@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 
 import pytest
