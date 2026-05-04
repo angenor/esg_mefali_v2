@@ -256,7 +256,7 @@
 - [X] T105 [US8] Implémenter `frontend/app/components/credit-score/EmptyStateWizard.vue` (4 étapes Financier/ESG/Gouvernance/Récap, saisies typées Money, persistance auto, soumission finale → POST credit-data + recompute)
 - [X] T106 [US8] Étendre `pages/credit-score/index.vue` : si `score === null` → afficher `<EmptyStateWizard>` à la place de la synthèse
 - [X] T107 [US8] Ajouter clés i18n `credit_score.wizard.*` (4 étapes, intros pédagogiques, CTA, message reprise/expiration)
-- [ ] T108 [US8] Faire passer T101–T103 verts
+- [X] T108 [US8] Faire passer T101–T103 verts (T103 e2e green : 3/3 US8-render + US8-A + US8-B après fix hydration SSR via `routeRules` /credit-score)
 
 ---
 

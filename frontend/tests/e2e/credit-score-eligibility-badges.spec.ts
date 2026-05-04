@@ -188,8 +188,10 @@ test.describe('Credit Score — Eligibility badges (F48 US3)', () => {
   test.beforeEach(async ({ page }) => {
     await setupMocks(page)
     await page.goto('/credit-score')
-    // Wait for the eligibility section
-    await expect(page.getByText('Éligibilité aux financements verts')).toBeVisible({ timeout: 10000 })
+    // Le sous-titre de la page contient déjà "éligibilité aux financements verts" → cibler le h2 de section.
+    await expect(
+      page.getByRole('heading', { name: 'Éligibilité aux financements verts' }),
+    ).toBeVisible({ timeout: 10000 })
   })
 
   test('US3-A : 3 badges rendus', async ({ page }) => {

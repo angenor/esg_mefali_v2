@@ -1,15 +1,9 @@
 // F48 T103 [US8] — Empty state wizard: 404 score → wizard 4 étapes + soumission + reprise localStorage.
 // Backend DOWN → all API calls mocked via page.route().
 //
-// BUG APPLICATIF DETECTE (non-bloquant):
-// La page /credit-score subit un "Hydration text content mismatch" (Vue 3 / Nuxt 4 SSR).
-// Cause : le composant HistoryEntry utilise des Date objects créés côté serveur qui
-// diffèrent côté client, provoquant un mismatch d'hydration.
-// Conséquence : les event listeners @click ne sont PAS attachés aux boutons du
-// EmptyStateWizard après l'hydration échouée — le clic sur "Suivant" est ignoré.
-// Les tests US8-A et US8-B sont marqués test.fixme en attendant le correctif.
-// Correctif suggéré : ajouter `definePageMeta({ ssr: false })` à /credit-score/index.vue
-// OU faire passer les dates via les computed (côté client uniquement).
+// Note: l'hydration SSR mismatch initial (cause: Intl.DateTimeFormat sur Date
+// avec TZ implicite divergente serveur/client) a été résolu via
+// `definePageMeta({ ssr: false })` dans pages/credit-score/index.vue.
 
 import { test, expect } from '@playwright/test'
 import path from 'path'
@@ -127,18 +121,6 @@ test.describe('Credit Score — Empty state wizard (F48 T103 US8)', () => {
   })
 
   test('US8-A : parcours complet 4 étapes + soumission → toast succès', async ({ page }) => {
-    test.fixme(
-      true,
-      [
-        'BUG APPLICATIF (T103 US8-A) : Hydration SSR mismatch sur /credit-score.',
-        'Le composant EmptyStateWizard est rendu côté serveur avec un state différent',
-        'du state client (dates, score null). Cela provoque un mismatch Vue3/Nuxt4',
-        'qui empêche les event listeners @click d\'être attachés aux boutons du wizard.',
-        'Résultat : clic sur "Suivant" ignoré, wizard reste sur étape 1.',
-        'Correctif : ajouter definePageMeta({ ssr: false }) à pages/credit-score/index.vue',
-        'Tracking: fix SSR hydration mismatch before enabling this test.',
-      ].join(' '),
-    )
     await setupBaseMocks(page, 404)
     await page.goto('/credit-score')
     await expect(page.locator('h1')).toContainText('Score crédit ESG', { timeout: 10000 })
@@ -162,7 +144,8 @@ test.describe('Credit Score — Empty state wizard (F48 T103 US8)', () => {
 
     await page.getByRole('button', { name: 'Suivant' }).click()
     await expect(page.getByText('Étape 3 sur 4')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByText('Gouvernance')).toBeVisible()
+    // L'intro de l'étape gouvernance contient le mot "gouvernance" → cibler le h2
+    await expect(page.getByRole('heading', { name: 'Gouvernance' })).toBeVisible()
 
     await page.screenshot({ path: screenshotPath('03-step3-governance') })
 
@@ -183,16 +166,15 @@ test.describe('Credit Score — Empty state wizard (F48 T103 US8)', () => {
   })
 
   test('US8-B : interruption à étape 2 + rechargement → reprise depuis localStorage', async ({ page }) => {
-    test.fixme(
-      true,
-      'BUG APPLICATIF (T103 US8-B) : même cause que US8-A (hydration SSR mismatch). Fix requis côté applicatif.',
-    )
     await setupBaseMocks(page, 404)
     await page.goto('/credit-score')
     await expect(page.locator('h1')).toContainText('Score crédit ESG', { timeout: 10000 })
+    // Stabilisation : attendre que le wizard soit monté côté client (ssr: false)
+    // avant d'interagir avec ses inputs.
+    await expect(page.getByText('Étape 1 sur 4')).toBeVisible({ timeout: 8000 })
 
     const caInput = page.getByLabel("Chiffre d'affaires")
-    await expect(caInput).toBeVisible({ timeout: 8000 })
+    await expect(caInput).toBeVisible({ timeout: 5000 })
     await caInput.click()
     await caInput.pressSequentially('3000000')
 
@@ -205,8 +187,10 @@ test.describe('Credit Score — Empty state wizard (F48 T103 US8)', () => {
     await expect(page.locator('h1')).toContainText('Score crédit ESG', { timeout: 10000 })
 
     await expect(page.getByText('Étape 2 sur 4')).toBeVisible({ timeout: 8000 })
+    // Le toast "Reprise" peut apparaître deux fois (mount + watch hydration en
+    // mode ssr: false) ; on vérifie qu'il est présent au moins une fois.
     await expect(
-      page.getByText('Reprise de votre saisie précédente (sauvegardée localement).'),
+      page.getByText('Reprise de votre saisie précédente (sauvegardée localement).').first(),
     ).toBeVisible({ timeout: 5000 })
 
     await page.screenshot({ path: screenshotPath('07-after-reload-step2-restored') })

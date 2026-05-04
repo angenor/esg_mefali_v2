@@ -7,6 +7,16 @@ export default defineNuxtConfig({
 
   modules: ["@pinia/nuxt", "nuxt-security"],
 
+  // F48 fix — /credit-score formate des Date via Intl.DateTimeFormat (GaugeHero,
+  // RecalcStrip, ScoreHistoryChart). Sans timezone fixe, le rendu serveur diverge
+  // du client → hydration text-content mismatch → event listeners @click du
+  // EmptyStateWizard non attachés. La page exige déjà JWT cookie + EventBus
+  // client + localStorage wizard : le SSR n'apporte aucun bénéfice ici.
+  // Précédent F47 (commit c14899e).
+  routeRules: {
+    "/credit-score": { ssr: false },
+  },
+
   // F02 — Sécurité : headers HSTS, CSP minimal, X-Frame-Options, cookies par défaut.
   security: {
     headers: {

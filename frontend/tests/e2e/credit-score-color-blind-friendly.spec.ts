@@ -122,9 +122,12 @@ test.describe('Credit Score — Color-blind friendly (F48 T121 Polish R-10)', ()
     await page.goto('/credit-score')
     await expect(page.locator('h1')).toContainText('Score crédit ESG', { timeout: 10000 })
 
-    // La classification doit être exprimée en texte, pas seulement en couleur
-    // ClassificationLabel rend "Bon" pour un score 72 (seuil 60-79)
-    await expect(page.getByText('Bon')).toBeVisible({ timeout: 8000 })
+    // La classification doit être exprimée en texte, pas seulement en couleur.
+    // ClassificationLabel rend "Bon" pour un score 72 (seuil 60-79).
+    // exact: true pour ne pas matcher "carBon" dans la sidebar (Empreinte carbone).
+    await expect(
+      page.getByTestId('main-content').getByText('Bon', { exact: true }),
+    ).toBeVisible({ timeout: 8000 })
 
     await page.screenshot({ path: screenshotPath('01-grayscale-classification') })
   })

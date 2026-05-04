@@ -26,6 +26,9 @@ import PartialCoverageBanner from '~/components/credit-score/PartialCoverageBann
 import ExportPdfButton from '~/components/credit-score/ExportPdfButton.vue'
 import type { EligibilityBadgeView } from '~/types/creditScore'
 
+// SSR désactivé via routeRules dans nuxt.config.ts (Nuxt 4 ignore
+// `ssr: false` dans definePageMeta) — cf. commentaire dans nuxt.config.ts.
+
 const { score, loading, error, refresh } = useCreditScore()
 const eligibility = useCreditEligibility()
 const history = useCreditHistory({ limit: 6 })
