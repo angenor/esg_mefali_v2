@@ -95,10 +95,17 @@ def _new_refresh_token(
 
 
 def _issue_session(db: Session, user: AccountUser) -> IssuedSession:
+    rt, refresh_clear = _new_refresh_token(db, user_id=user.id)
+    # F52 — ``sid`` claim = id du refresh token = identifiant de session.
+    # Permet la révocation par-session (US2 SC-005) sans rotation globale.
     access = create_access_token(
-        {"sub": str(user.id), "role": str(user.role), "account_id": str(user.account_id) if user.account_id else None}
+        {
+            "sub": str(user.id),
+            "role": str(user.role),
+            "account_id": str(user.account_id) if user.account_id else None,
+            "sid": str(rt.id),
+        }
     )
-    _, refresh_clear = _new_refresh_token(db, user_id=user.id)
     return IssuedSession(
         user=user,
         access_token=access,
@@ -271,10 +278,15 @@ def rotate_refresh(db: Session, *, refresh_clear: str) -> IssuedSession:
     if user is None:
         raise InvalidRefreshError("utilisateur introuvable")
 
+    new_rt, new_clear = _new_refresh_token(db, user_id=user.id, parent_id=rt.id)
     access = create_access_token(
-        {"sub": str(user.id), "role": str(user.role), "account_id": str(user.account_id) if user.account_id else None}
+        {
+            "sub": str(user.id),
+            "role": str(user.role),
+            "account_id": str(user.account_id) if user.account_id else None,
+            "sid": str(new_rt.id),
+        }
     )
-    _, new_clear = _new_refresh_token(db, user_id=user.id, parent_id=rt.id)
     record_event(
         db,
         event_type="auth.refresh.rotated",

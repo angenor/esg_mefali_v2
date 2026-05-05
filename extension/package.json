@@ -1,0 +1,24 @@
+{
+  "name": "esg-mefali-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:sidepanel": "vite --config sidepanel/vite.config.ts",
+    "build:sidepanel": "vite build --config sidepanel/vite.config.ts && node scripts/check-bundle-size.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.6",
+    "@types/chrome": "^0.0.293",
+    "happy-dom": "^15.11.7",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.8",
+    "vue-tsc": "^2.2.0"
+  }
+}

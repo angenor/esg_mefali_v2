@@ -1,7 +1,8 @@
-"""F04 — Audit log read service (US3)."""
+"""F04 — Audit log read service (US3) + helpers F52."""
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -9,7 +10,10 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.audit.helper import record_audit
 from app.audit.schemas import AuditLogEntryOut, AuditLogPage, SourceOfChange
+
+logger = logging.getLogger(__name__)
 
 MAX_PAGE_SIZE = 200
 
@@ -99,3 +103,80 @@ def list_entries(  # noqa: PLR0913
         page=page,
         page_size=page_size,
     )
+
+
+# ---------------------------------------------------------------------------
+# F52 helpers — settings + deletion (best-effort wrappers around record_audit)
+# ---------------------------------------------------------------------------
+
+
+def log_settings_change(  # noqa: PLR0913
+    db: Session,
+    *,
+    user_id: UUID,
+    account_id: UUID | None,
+    entity: str,
+    entity_id: UUID,
+    field: str,
+    old: Any,
+    new: Any,
+    source: SourceOfChange | str = SourceOfChange.MANUAL,
+) -> None:
+    """Audit générique pour les écrans `/parametres` (P3, FR-013).
+
+    Mute les exceptions internes : un échec d'audit ne doit pas casser la
+    mutation métier appelante (cf. ``record_audit`` pour la sémantique).
+    """
+    try:
+        record_audit(
+            db,
+            entity_type=entity,
+            entity_id=entity_id,
+            field=field,
+            old=old,
+            new=new,
+            source_of_change=source,
+            user_id=user_id,
+            account_id=account_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — best-effort
+        logger.warning(
+            "audit: log_settings_change failed entity=%s field=%s: %s",
+            entity,
+            field,
+            exc,
+        )
+
+
+def log_deletion_request(
+    db: Session,
+    *,
+    user_id: UUID,
+    account_id: UUID,
+    request_id: UUID,
+    action: str,
+    source: SourceOfChange | str = SourceOfChange.MANUAL,
+) -> None:
+    """Audit dédié au cycle ``account_deletion_request``.
+
+    ``action`` ∈ {created, cancelled, executed}.
+    """
+    try:
+        record_audit(
+            db,
+            entity_type="account_deletion_request",
+            entity_id=request_id,
+            field="status",
+            old=None,
+            new=action,
+            source_of_change=source,
+            user_id=user_id,
+            account_id=account_id,
+        )
+    except Exception as exc:  # noqa: BLE001 — best-effort
+        logger.warning(
+            "audit: log_deletion_request failed request=%s action=%s: %s",
+            request_id,
+            action,
+            exc,
+        )

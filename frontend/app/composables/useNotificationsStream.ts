@@ -90,6 +90,34 @@ export function useNotificationsStream(): NotificationsStream {
       }
     })
 
+    // F52 — réception du bulk-read émis par /read-all (autres onglets).
+    source.addEventListener('notification.bulk_read', (ev) => {
+      const data = (ev as MessageEvent).data
+      try {
+        const payload = JSON.parse(data)
+        useNotificationsStore().applyBulkReadFromStream(payload)
+      } catch {
+        // payload invalide → ignoré
+      }
+    })
+
+    // F52 — réception du read individuel (autres onglets).
+    source.addEventListener('notification.read', (ev) => {
+      const data = (ev as MessageEvent).data
+      try {
+        const payload = JSON.parse(data) as { id?: string }
+        if (typeof payload?.id === 'string') {
+          const store = useNotificationsStore()
+          const found = store.items.find((n) => n.id === payload.id)
+          if (found && !found.read_at) {
+            store.pushFromStream({ ...found, read_at: new Date().toISOString() })
+          }
+        }
+      } catch {
+        // payload invalide → ignoré
+      }
+    })
+
     source.addEventListener('error', () => {
       isConnected.value = false
       try {

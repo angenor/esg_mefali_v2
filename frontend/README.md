@@ -59,3 +59,54 @@ ls dist/_nuxt/ | grep -E "(chart|mermaid|leaflet)"
 ```
 
 Aucun de ces fichiers ne doit apparaître dans `entry.*.js`.
+
+## Quickstart F52 — Notifications, Paramètres, Exports
+
+Pages livrées avec la feature 052 :
+
+| Route | Rôle |
+|---|---|
+| `/notifications` | Centre paginé (filtres `unread_only`, `kinds[]`, `from`, `to`), drawer détail, mark-all-read optimiste, mise à jour SSE temps réel, état vide. |
+| `/parametres/profil` | Nom, photo, langue, e-mail (re-vérification). |
+| `/parametres/notifications` | Toggles email + in-app par kind (cf. F38). |
+| `/parametres/consents` | RGPD : retrait avec audit + e-mail de confirmation. |
+| `/parametres/securite` | Sessions actives + révocation, statut extension. |
+| `/parametres/donnees` | Export RGPD complet (`POST /me/exports {type:"rgpd_full"}`). |
+| `/parametres/suppression` | Zone dangereuse : suppression compte J+30, annulable. |
+| `/dashboard/exports` | Historique exports (PDF/JSON), création async, bascule e-mail > 100 Mo. |
+
+### Bottom-sheets (P10)
+
+Toute saisie sensible passe par un **bottom-sheet** :
+
+- `EmailChangeBottomSheet`, `PasswordChangeBottomSheet`,
+- `ConsentWithdrawBottomSheet`, `SessionRevokeBottomSheet`,
+- `AccountDeletionBottomSheet`, `NewExportBottomSheet`.
+
+### Stores Pinia
+
+`notifications`, `notificationPreferences`, `consents`, `sessions`,
+`accountDeletion`, `exports` — tous SSR-safe.
+
+### Composables
+
+`useNotificationsFilters` (sync query string), `useNotificationsStream`
+(SSE `notification.created`/`bulk_read`/`read`), `useEmailChangeFlow`,
+`useAccountDeletion`, `useExtensionStatus` (refresh + forcePing fallback web).
+
+### Tests
+
+```bash
+# Unit/composants
+cd frontend && pnpm vitest run app/stores/__tests__ app/composables/__tests__ app/components/notifications/__tests__ app/components/parametres/__tests__
+
+# E2E
+pnpm playwright test e2e/052/notifications-mark-all-read.spec.ts
+pnpm playwright test e2e/052/account-deletion-30d.spec.ts
+pnpm playwright test e2e/052/email-change-reverif.spec.ts
+pnpm playwright test e2e/052/exports-history.spec.ts
+pnpm playwright test e2e/052/a11y.spec.ts
+```
+
+Variables `E2E_PME_EMAIL` / `E2E_PME_PASSWORD` requises ; les tests sont
+skippés proprement quand elles sont absentes.

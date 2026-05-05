@@ -1,11 +1,19 @@
-"""F33 - Routes PME ``/extension/*``."""
+"""F33 + F52 US4/US5 - Routes PME ``/extension/*`` et ``/me/extension/*``.
+
+F33 historique : ``GET /extension/url-patterns``, ``/profile-summary``,
+``POST /extension/suggest-field``, ``GET /extension/field-mappings``.
+
+F52 ajouts (préfixe ``/me/extension``) : ``POST /ping``, ``GET /status``,
+``GET /sidepanel-context``.
+"""
 
 from __future__ import annotations
 
 import logging
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_pme
@@ -17,17 +25,28 @@ from app.extension.schemas import (
     SuggestFieldOut,
     UrlPatternListOut,
 )
+from app.extension.schemas_f52 import (
+    ExtensionPingIn,
+    ExtensionStatusOut,
+    SidepanelContextOut,
+)
 from app.extension.service import (
     build_profile_summary,
     list_active_url_patterns,
     list_field_mappings,
     suggest_field,
 )
+from app.extension.service_f52 import (
+    build_sidepanel_context,
+    get_status,
+    record_ping,
+)
 from app.models.account_user import AccountUser
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/extension", tags=["extension"])
+me_extension_router = APIRouter(prefix="/me/extension", tags=["extension"])
 
 
 def _safe_audit(
@@ -127,3 +146,52 @@ def get_field_mappings(
         action="extension.field_mappings",
     )
     return out
+
+
+# ---------------------------------------------------------------------------
+# F52 US4 / US5 — /me/extension/{ping,status,sidepanel-context}
+# ---------------------------------------------------------------------------
+
+
+@me_extension_router.post("/ping", status_code=status.HTTP_204_NO_CONTENT)
+def post_ping(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+    body: Annotated[ExtensionPingIn, Body()],
+) -> Response:
+    if user.account_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "no_account", "message": "PME sans account_id."},
+        )
+    record_ping(
+        db,
+        user=user,
+        extension_version=body.extension_version,
+        user_agent_summary=body.user_agent_summary,
+    )
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@me_extension_router.get("/status", response_model=ExtensionStatusOut)
+def get_extension_status(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ExtensionStatusOut:
+    return get_status(db, user=user)
+
+
+@me_extension_router.get("/sidepanel-context", response_model=SidepanelContextOut)
+def get_sidepanel_context(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+    host: Annotated[str, Query(min_length=1, max_length=255)],
+    path: Annotated[str, Query(min_length=1, max_length=2048)],
+) -> SidepanelContextOut:
+    if user.account_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "no_account", "message": "PME sans account_id."},
+        )
+    return build_sidepanel_context(db, user=user, host=host, path=path)

@@ -229,7 +229,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27 — _Phase 7 (Polish) en cours : tests perf (T098-T099) + a11y (T100-T101) livrés ; coverage backend ciblé ≥80 % à atteindre une fois les suites US1-US4 complètes (cf. specs/051-matching-candidatures-simulateur-ui/tasks.md)._
 
 ### Phase G — Notifications & extension panneau
-- **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export
+- **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export — `done` (specs/052-notifications-settings-extension/) — _Phases 1–10 livrées (US1–US7) ; sidepanel MV3 < 200 kB gzip, mini-chat IA + offres recommandées, push système `chrome.notifications` sur deadline_j_minus_1, suppression compte J+30, audit log F52 testé (test_f52_coverage.py)._
 
 ### Sprint UI recommandé
 

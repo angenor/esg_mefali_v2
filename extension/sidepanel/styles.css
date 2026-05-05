@@ -1,0 +1,11 @@
+/* F52 sidepanel — Tailwind compilé via build:sidepanel script. */
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}

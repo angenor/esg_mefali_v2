@@ -86,3 +86,44 @@ Quatre surfaces complémentaires regroupées (réglages secondaires) :
 - Side panel : pas de leak tenant via `runtime.sendMessage`.
 - Notifications batch read : optimistic UI + rollback si fail.
 - Export RGPD taille : limite 100 MB, sinon notification + email.
+
+## Implémentation livrée (2026-05-05)
+
+Voir [`specs/052-notifications-settings-extension/`](../../specs/052-notifications-settings-extension/) — phases 1 → 10 livrées.
+
+### Pages frontend Nuxt
+
+- `pages/notifications/index.vue` — centre paginé + filtres + drawer + cloche temps réel.
+- `pages/parametres/{index,profil,notifications,consents,securite,donnees,suppression}.vue` — RGPD complet J+30.
+- `pages/dashboard/exports.vue` — historique + nouvelle génération + bascule e-mail > 100 Mo.
+
+### Extension MV3
+
+- `extension/sidepanel/` — bundle Vite Vue 3 standalone, 3 vues (Candidatures, Offres, Chat), routeur custom.
+- `extension/background.js` — heartbeat ping toutes les 30 min, validation `sender.tab.url`,
+  EventSource SSE → `chrome.notifications` sur `deadline_j_minus_1`.
+- `extension/background-helpers/notifications.ts` — wrapper testé via Vitest (mock chrome).
+- Bundle gzip mesuré ~32 kB (cible < 200 kB).
+
+### Suppression de compte (J+30)
+
+Flow utilisateur :
+
+1. `/parametres/suppression` → `AccountDeletionDangerZone` (zone rouge).
+2. Bottom-sheet animé (P10) : saisie de la **raison sociale exacte** comme preuve.
+3. Backend planifie `scheduled_for = now() + 30 days`, audit `account_deletion_request`,
+   e-mail de confirmation + e-mail à J+25 (rappel).
+4. L'utilisateur peut annuler à tout moment via `DELETE /me/account-deletion`.
+5. CLI `python -m app.users.cli purge_deletions` purge tous les `pending` arrivés à terme.
+
+### Quickstart utilisateur
+
+```bash
+make backend                                # http://localhost:8010
+make frontend                               # http://localhost:3001
+# UI : se connecter, ouvrir /notifications, /parametres/*, /dashboard/exports
+# Extension : pnpm --dir extension build:sidepanel ; charger en mode unpacked.
+```
+
+Critères de succès vérifiés via Playwright (`frontend/e2e/052/`) et pytest
+(`backend/tests/integration/{notifications,users,dashboard,extension,audit}/`).
