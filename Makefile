@@ -33,6 +33,12 @@ db-reset:
 migrate:
 	cd backend && . .venv/bin/activate && alembic upgrade head
 
+purge-documents:
+	cd backend && . .venv/bin/activate && python -m app.scripts.purge_documents
+
+purge-documents-dry-run:
+	cd backend && . .venv/bin/activate && python -m app.scripts.purge_documents --dry-run
+
 backend:
 	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload --port 8010
 
@@ -50,6 +56,7 @@ test-frontend:
 lint:
 	cd backend && . .venv/bin/activate && ruff check .
 	cd frontend && pnpm lint
+	bash frontend/scripts/check-no-arbitrary.sh
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

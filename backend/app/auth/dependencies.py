@@ -41,6 +41,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Account
     """Retourne l'utilisateur courant ou 401.
 
     Pose également les SET LOCAL pour RLS sur la session FastAPI.
+    F42 R5 : rejette tout JWT dont ``iat`` est antérieur à
+    ``account_user.tokens_invalidated_at`` (invalidé par un reset password).
+    F52 US2 : rejette tout JWT dont le claim ``sid`` correspond à un
+    ``refresh_tokens.revoked_at IS NOT NULL`` (session révoquée individuellement).
     """
     payload = getattr(request.state, "user_payload", None)
     if not payload or not payload.get("sub"):
@@ -51,6 +55,38 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Account
     )
     if user is None:
         raise _NOT_AUTH
+
+    invalidated_at = getattr(user, "tokens_invalidated_at", None)
+    if invalidated_at is not None:
+        iat = payload.get("iat")
+        # iat est un epoch (int). On compare en s'assurant d'un timezone-aware datetime.
+        from datetime import UTC, datetime
+
+        if iat is not None:
+            try:
+                token_iat = datetime.fromtimestamp(int(iat), tz=UTC)
+            except (ValueError, TypeError):
+                raise _NOT_AUTH from None
+            if invalidated_at.tzinfo is None:
+                invalidated_at = invalidated_at.replace(tzinfo=UTC)
+            if token_iat < invalidated_at:
+                raise _NOT_AUTH
+
+    # F52 — vérification session révoquée par ``sid`` (claim ajouté par
+    # ``_issue_session``). Tokens émis avant cet ajout n'ont pas de sid → on
+    # ignore le contrôle pour rester rétro-compatible.
+    sid = payload.get("sid")
+    if sid:
+        row = db.execute(
+            text(
+                "SELECT revoked_at FROM refresh_tokens "
+                "WHERE id = CAST(:sid AS UUID) LIMIT 1"
+            ),
+            {"sid": sid},
+        ).first()
+        if row is not None and row[0] is not None:
+            raise _NOT_AUTH
+
     is_admin = str(user.role) == "admin"
     _set_session_context(
         db,

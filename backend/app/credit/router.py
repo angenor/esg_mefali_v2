@@ -18,8 +18,11 @@ from app.credit.schemas import (
     CreditDataIn,
     CreditDataKind,
     CreditDataOut,
+    CreditRecommendationsOut,
     CreditScoreOut,
+    EligibilityListOut,
     MethodologyOut,
+    ScoreHistoryOut,
 )
 from app.db import get_db
 from app.decorators.requires_consent import RequiresConsent
@@ -169,6 +172,58 @@ def get_credit_score(
             detail={"code": "credit_score_not_found", "message": str(exc)},
         ) from exc
     return CreditScoreOut(**result)
+
+
+@router.get("/me/credit-score/history", response_model=ScoreHistoryOut)
+def get_credit_score_history(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(default=6, ge=1, le=24),
+    entreprise_id: UUID | None = None,
+) -> ScoreHistoryOut:
+    eid = _resolve_entreprise_id(user, entreprise_id)
+    items = credit_service.list_history(
+        db,
+        account_id=_account_uuid(user),
+        entreprise_id=eid,
+        limit=limit,
+    )
+    return ScoreHistoryOut(items=items)
+
+
+@router.get("/me/credit-score/eligibility", response_model=EligibilityListOut)
+def get_credit_score_eligibility(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+    entreprise_id: UUID | None = None,
+) -> EligibilityListOut:
+    eid = _resolve_entreprise_id(user, entreprise_id)
+    result = credit_service.evaluate_eligibility(
+        db,
+        account_id=_account_uuid(user),
+        entreprise_id=eid,
+    )
+    return EligibilityListOut(**result)
+
+
+@router.get(
+    "/me/credit-score/recommendations",
+    response_model=CreditRecommendationsOut,
+)
+def get_credit_score_recommendations(
+    user: Annotated[AccountUser, Depends(get_current_pme)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = Query(default=5, ge=1, le=5),
+    entreprise_id: UUID | None = None,
+) -> CreditRecommendationsOut:
+    eid = _resolve_entreprise_id(user, entreprise_id)
+    result = credit_service.list_recommendations(
+        db,
+        account_id=_account_uuid(user),
+        entreprise_id=eid,
+        limit=limit,
+    )
+    return CreditRecommendationsOut(**result)
 
 
 @public_router.get("/methodologie/credit-scoring", response_model=MethodologyOut)

@@ -356,6 +356,60 @@ def get_latest_score_detail(
     }
 
 
+def list_history(
+    db: Session,
+    *,
+    account_id: uuid.UUID,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    referentiel_code: str,
+    limit: int = 12,
+) -> list[dict[str, Any]]:
+    """F46 — Retourne l'historique des calculs ``(entity, referentiel)``.
+
+    Lecture pure (pas d'audit). Trié ``computed_at DESC`` ; ``LIMIT`` borné.
+    Lève :class:`ReferentielNotFound` si le code référentiel est inconnu /
+    non publié (mappé en 404 par le routeur).
+    """
+    ref = _load_published_referentiel(db, referentiel_code)
+    if ref is None:
+        raise ReferentielNotFound(referentiel_code)
+
+    rows = db.execute(
+        text(
+            """
+            SELECT id, computed_at, score_global, referentiel_version
+            FROM score_calculation
+            WHERE account_id = CAST(:aid AS UUID)
+              AND entity_type = :etype
+              AND entity_id = CAST(:eid AS UUID)
+              AND referentiel_id = CAST(:rid AS UUID)
+            ORDER BY computed_at DESC
+            LIMIT :limit
+            """
+        ),
+        {
+            "aid": str(account_id),
+            "etype": entity_type,
+            "eid": str(entity_id),
+            "rid": str(ref["id"]),
+            "limit": limit,
+        },
+    ).fetchall()
+
+    return [
+        {
+            "score_calculation_id": r.id,
+            "computed_at": r.computed_at,
+            "score_global": (
+                float(r.score_global) if r.score_global is not None else None
+            ),
+            "referentiel_version": int(r.referentiel_version),
+        }
+        for r in rows
+    ]
+
+
 def list_latest_scores(
     db: Session,
     *,

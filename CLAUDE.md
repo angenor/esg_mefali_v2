@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/031-plan-action-rappels-bibliotheque/plan.md
+specs/052-notifications-settings-extension/plan.md
 <!-- SPECKIT END -->
 
 The Spec Kit "current feature" is tracked in `.specify/feature.json` (`feature_directory`). When unsure which feature is active, read that file first — it points to the spec/plan/tasks under `specs/`.
@@ -107,7 +107,14 @@ Nuxt 4 (Composition API) + Pinia + Tailwind v4 (`@import tailwindcss`) + chart.j
 
 ### Browser extension (`extension/`)
 
-Chrome MV3 (manifest, background/content/popup) — used by features 033–034 (detection/prefill, guidage/suivi/notifications) to surface ESG Mefali on third-party platforms. Backend endpoints under `app/extension/` and `app/api/routes/` serve it.
+Chrome MV3 (manifest, background/content/popup) — used by features 033–034 (detection/prefill, guidage/suivi/notifications) and **F52** (sidepanel + push notifications) to surface ESG Mefali on third-party platforms. Backend endpoints under `app/extension/` and `app/api/routes/` serve it.
+
+F52 ajoute :
+
+- `extension/sidepanel/` — bundle Vite Vue 3 standalone (3 vues : `candidatures`, `offers`, `chat`), `chrome.sidePanel` API, < 200 kB gzip (mesuré ~32 kB). Tests Vitest dans `extension/sidepanel/__tests__/`.
+- `extension/background-helpers/notifications.ts` — wrapper testable autour de `chrome.notifications` (utilisé par `background.js`, `kind=deadline_j_minus_1` → notification système ; clic ouvre la candidature dans un nouvel onglet).
+- `extension/background.js` — heartbeat `POST /me/extension/ping` toutes les 30 min, validation `sender.tab.url` contre catalogue F33, fetch `/me/extension/sidepanel-context`, EventSource SSE `/me/notifications/stream` pour le push notif.
+- Build : `pnpm --dir extension build:sidepanel` (sortie `extension/dist/sidepanel/`, garde-fou `scripts/check-bundle-size.mjs`).
 
 ## Constitutional invariants (`.specify/memory/constitution.md`)
 

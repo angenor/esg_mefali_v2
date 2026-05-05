@@ -121,7 +121,15 @@ class TestListDownloadDelete:
 
         r1 = _upload(client, doc_type="statuts", filename="s.pdf")
         assert r1.status_code == 201
-        r2 = _upload(client, doc_type="contrat", filename="c.pdf")
+        # F50 — l'index UNIQUE (account_id, content_sha256) impose un contenu
+        # distinct pour le 2ᵉ upload (le pre-flight by-fingerprint dédoublonne
+        # côté client). On modifie un seul octet pour produire un SHA différent.
+        r2 = _upload(
+            client,
+            doc_type="contrat",
+            filename="c.pdf",
+            data=PDF_NATIVE.replace(b"F22 statuts SARL", b"F22 contrat SARL "),
+        )
         assert r2.status_code == 201
         doc1_id = r1.json()["id"]
         doc2_id = r2.json()["id"]

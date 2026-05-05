@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="Bienvenue">
+  <title>Bienvenue</title>
+  <g fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 240c40-30 80-30 120 0s80 30 120 0" stroke="#34a87a"/>
+    <circle cx="160" cy="140" r="48" fill="#e8f5ee" stroke="#0f7a4a"/>
+    <path d="M140 138l14 14 26-30" stroke="#0f7a4a" stroke-width="3"/>
+    <path d="M96 90l-12-14M224 90l12-14M160 70V52" stroke="#94a3b8"/>
+  </g>
+</svg>

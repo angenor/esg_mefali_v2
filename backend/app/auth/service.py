@@ -35,7 +35,11 @@ logger = logging.getLogger(__name__)
 
 
 REFRESH_TTL = timedelta(days=30)
-RESET_TTL = timedelta(minutes=30)
+
+
+def _reset_ttl() -> timedelta:
+    """Lit la valeur courante de PASSWORD_RESET_TTL_MINUTES (settings)."""
+    return timedelta(minutes=get_settings().PASSWORD_RESET_TTL_MINUTES)
 
 
 class EmailAlreadyUsedError(Exception):
@@ -91,10 +95,17 @@ def _new_refresh_token(
 
 
 def _issue_session(db: Session, user: AccountUser) -> IssuedSession:
+    rt, refresh_clear = _new_refresh_token(db, user_id=user.id)
+    # F52 — ``sid`` claim = id du refresh token = identifiant de session.
+    # Permet la révocation par-session (US2 SC-005) sans rotation globale.
     access = create_access_token(
-        {"sub": str(user.id), "role": str(user.role), "account_id": str(user.account_id) if user.account_id else None}
+        {
+            "sub": str(user.id),
+            "role": str(user.role),
+            "account_id": str(user.account_id) if user.account_id else None,
+            "sid": str(rt.id),
+        }
     )
-    _, refresh_clear = _new_refresh_token(db, user_id=user.id)
     return IssuedSession(
         user=user,
         access_token=access,
@@ -267,10 +278,15 @@ def rotate_refresh(db: Session, *, refresh_clear: str) -> IssuedSession:
     if user is None:
         raise InvalidRefreshError("utilisateur introuvable")
 
+    new_rt, new_clear = _new_refresh_token(db, user_id=user.id, parent_id=rt.id)
     access = create_access_token(
-        {"sub": str(user.id), "role": str(user.role), "account_id": str(user.account_id) if user.account_id else None}
+        {
+            "sub": str(user.id),
+            "role": str(user.role),
+            "account_id": str(user.account_id) if user.account_id else None,
+            "sid": str(new_rt.id),
+        }
     )
-    _, new_clear = _new_refresh_token(db, user_id=user.id, parent_id=rt.id)
     record_event(
         db,
         event_type="auth.refresh.rotated",
@@ -313,7 +329,7 @@ def request_password_reset(db: Session, *, email: str) -> str | None:
             user_id=user.id,
             token_hash=h,
             issued_at=now,
-            expires_at=now + RESET_TTL,
+            expires_at=now + _reset_ttl(),
         )
     )
     db.flush()
@@ -355,6 +371,8 @@ def consume_password_reset(
 
     user.password_hash = hash_password(new_password)
     user.updated_at = now.replace(tzinfo=None)
+    # F42 R5 — invalide toutes les sessions JWT antérieures à ce reset
+    user.tokens_invalidated_at = now
     rt.consumed_at = now
 
     # Révoque tous les refresh actifs

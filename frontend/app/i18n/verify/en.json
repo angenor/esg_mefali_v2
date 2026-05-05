@@ -1,0 +1,65 @@
+{
+  "lang_label": "English",
+  "header": {
+    "title": "Attestation verification",
+    "subtitle": "Public page"
+  },
+  "badge": {
+    "valid": "Valid signature",
+    "invalid": "Invalid signature"
+  },
+  "status": {
+    "active": "Active",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "revoked_banner": {
+    "title": "Attestation revoked",
+    "revoked_at": "Revoked on {date}",
+    "reason_label": "Reason"
+  },
+  "identity": {
+    "legal_name": "Legal name",
+    "type": "Type",
+    "issued_at": "Issued on",
+    "expires_at": "Expires on"
+  },
+  "payload": {
+    "indicators_title": "Published indicators",
+    "sources_title": "Sources",
+    "no_indicators": "No published indicators."
+  },
+  "explainer": {
+    "title": "What is an ESG Mefali attestation?",
+    "body": "An ESG Mefali attestation is a digitally signed document certifying ESG scores computed from verified reference frameworks.",
+    "doc_link": "Learn more"
+  },
+  "footer": {
+    "legal": "Legal notice",
+    "rgpd": "GDPR",
+    "about": "About"
+  },
+  "actions": {
+    "download_pdf": "Download attestation (PDF)"
+  },
+  "errors": {
+    "not_found_title": "Attestation not found",
+    "not_found_body": "The link you opened does not match any valid attestation.",
+    "server_title": "Service unavailable",
+    "server_body": "Please try again in a few moments."
+  },
+  "date_format": "MMM d, yyyy",
+  "revoke_reason": {
+    "erreur_emission": "Issuance error",
+    "donnees_invalidees": "Data invalidated",
+    "demande_pme": "At PME's request",
+    "expiration_anticipee": "Early expiration",
+    "autre": "Other reason"
+  },
+  "attestation_type": {
+    "conformite_esg": "ESG Compliance",
+    "bilan_carbone": "Carbon footprint",
+    "score_credit": "Credit score",
+    "dossier_candidature": "Application file"
+  }
+}

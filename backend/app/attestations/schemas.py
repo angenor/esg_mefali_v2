@@ -46,6 +46,19 @@ class AttestationOut(BaseModel):
     verify_url: str
 
 
+class PublicIndicator(BaseModel):
+    """F49 T009 — KPI exposé publiquement avec libellé bilingue optionnel."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str
+    label: str
+    label_en: str | None = None
+    value: Any
+    unit: str | None = None
+    source_id: str | None = None
+
+
 class PublicVerification(BaseModel):
     """Payload de la page publique /verify/{public_id}/json."""
 
@@ -57,12 +70,16 @@ class PublicVerification(BaseModel):
     generated_at: datetime
     valid_until: datetime
     revoked_at: datetime | None = None
+    revoke_reason: str | None = None
     scores: dict[str, Any]
     referentiels_versions: dict[str, str]
     hash_document: str
     signature_ed25519: str
     pubkey_fingerprint: str
     download_url: str
+    # F49 T009 — liste structurée des KPI (avec label_en optionnel) ;
+    # complémentaire à `scores` qui reste un dict K/V brut pour rétrocompat.
+    indicators: list[PublicIndicator] = []
 
 
 class PubkeyOut(BaseModel):

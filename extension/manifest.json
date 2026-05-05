@@ -2,13 +2,21 @@
   "manifest_version": 3,
   "name": "ESG Mefali — Détection & pré-remplissage",
   "default_locale": "fr",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "__MSG_extDescription__",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost:8000/*"],
+  "permissions": ["storage", "activeTab", "sidePanel", "notifications", "tabs"],
+  "host_permissions": [
+    "http://localhost:8010/*",
+    "https://*.esg-mefali.example/*",
+    "https://*.boad.org/*",
+    "https://*.afd.fr/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_title": "ESG Mefali"
+  },
+  "side_panel": {
+    "default_path": "dist/sidepanel/index.html"
   },
   "background": {
     "service_worker": "background.js"

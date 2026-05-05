@@ -51,3 +51,4 @@ coverage/
 
 # F12 - Local storage for documents projet (pas en repo)
 backend/storage/
+backend/backend/

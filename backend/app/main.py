@@ -131,7 +131,17 @@ app.include_router(credit_public_router)
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
+# F50 — Extensions UI documents : fingerprint / validate / link-projet / relaunch.
+from app.api.routes.entreprise_documents_f50 import (  # noqa: E402
+    f50_router as entreprise_documents_f50_router,
+)
+from app.api.routes.entreprise_documents_f50 import (
+    fingerprint_router as documents_fingerprint_router,
+)
+
 app.include_router(entreprise_documents_router)
+app.include_router(documents_fingerprint_router)
+app.include_router(entreprise_documents_f50_router)
 
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.
@@ -218,21 +228,33 @@ app.include_router(dashboard_router)
 from app.extension.admin_router import (  # noqa: E402
     router as extension_admin_router,
 )
-from app.extension.router import router as extension_router  # noqa: E402
+from app.extension.router import (  # noqa: E402
+    me_extension_router as f52_me_extension_router,
+    router as extension_router,
+)
 
 app.include_router(extension_router)
 app.include_router(extension_admin_router)
+app.include_router(f52_me_extension_router)
 
 # F34 — Suivi candidatures PME + centre de notifications + recommandations.
 from app.candidatures.router import (  # noqa: E402
     router as f34_me_candidatures_router,
 )
 from app.notifications.router import (  # noqa: E402
+    preferences_router as f52_notification_preferences_router,
     router as f34_notifications_router,
 )
+from app.notifications.stream import (  # noqa: E402
+    router as f38_notifications_stream_router,
+)
+from app.users.router_f52 import router as f52_users_router  # noqa: E402
 
 app.include_router(f34_me_candidatures_router)
 app.include_router(f34_notifications_router)
+app.include_router(f52_notification_preferences_router)
+app.include_router(f38_notifications_stream_router)
+app.include_router(f52_users_router)
 
 
 @app.get("/health")

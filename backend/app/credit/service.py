@@ -19,12 +19,14 @@ from sqlalchemy.orm import Session
 
 from app.audit import SourceOfChange, record_audit
 from app.credit.csv_parser import parse_statement
+from app.credit.eligibility_catalog import EligibilityRule, active_catalog
 from app.credit.engine import (
     DEFAULT_METHODOLOGY,
     ScoringInputs,
     compute_full_score,
 )
 from app.credit.schemas import CreditDataKind
+from app.credit.subscore_mapping import FACTOR_TO_BUCKET, SUBSCORE_BUCKETS
 
 
 class CreditScoreNotFound(Exception):
@@ -149,6 +151,74 @@ def _latest_credit_data(
         except ValueError:
             return None
     return payload
+
+
+# --------------------------------------------------------------------------- #
+# F48 - Sous-scores derives (vue, pas de stockage)                             #
+# --------------------------------------------------------------------------- #
+
+
+def compute_subscores(
+    facteurs: list[dict[str, Any]] | None,
+) -> dict[str, int | None] | None:
+    """Agrege les facteurs en 4 sous-scores normalises 0-100.
+
+    Pour chaque bucket, calcule la moyenne ponderee des contributions des
+    facteurs presents (poids defini dans ``FACTOR_TO_BUCKET``).
+    - Bucket sans facteur disponible -> ``None``.
+    - Aucun facteur exploitable -> retourne ``None`` (pas de sous-scores).
+    - Facteur non liste -> ignore (degradation gracieuse).
+    """
+    if not facteurs:
+        return None
+
+    bucket_acc: dict[str, list[tuple[float, float]]] = {b: [] for b in SUBSCORE_BUCKETS}
+    any_mapped = False
+    for f in facteurs:
+        name = f.get("name") if isinstance(f, dict) else None
+        if not isinstance(name, str):
+            continue
+        mapping = FACTOR_TO_BUCKET.get(name)
+        if mapping is None:
+            continue
+        bucket, weight = mapping
+        # Si le facteur n'a pas pu etre calcule (donnee absente), value est None
+        # et contribution=0 — on ignore pour ne pas tirer le bucket vers le bas.
+        if f.get("value") is None:
+            continue
+        contribution = f.get("contribution")
+        if contribution is None:
+            continue
+        try:
+            contrib_val = float(contribution)
+        except (TypeError, ValueError):
+            continue
+        bucket_acc[bucket].append((contrib_val, weight))
+        any_mapped = True
+
+    if not any_mapped:
+        return None
+
+    out: dict[str, int | None] = {}
+    for bucket in SUBSCORE_BUCKETS:
+        items = bucket_acc[bucket]
+        if not items:
+            out[bucket] = None
+            continue
+        total_weight = sum(w for _, w in items)
+        if total_weight <= 0:
+            out[bucket] = None
+            continue
+        # contribution = value*weight (cf engine), deja sur echelle [0..1*weight].
+        # On ramene chaque contribution au "score normalise du facteur" : c/w * 100,
+        # puis on prend la moyenne ponderee par les poids du bucket.
+        weighted_sum = 0.0
+        for contrib, w in items:
+            facteur_norm = (contrib / w) * 100.0 if w > 0 else 0.0
+            weighted_sum += facteur_norm * w
+        avg = weighted_sum / total_weight
+        out[bucket] = max(0, min(100, round(avg)))
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -412,6 +482,7 @@ def recompute_score(
         "methodologie_version": result["methodologie_version"],
         "coherence_warning": result["coherence_warning"],
         "computed_at": datetime.now(UTC),
+        "subscores": compute_subscores(result["facteurs"]),
     }
 
 
@@ -453,4 +524,425 @@ def get_latest_score(
         "methodologie_version": int(row.methodologie_version),
         "coherence_warning": bool(row.coherence_warning),
         "computed_at": row.computed_at,
+        "subscores": compute_subscores(facteurs if isinstance(facteurs, list) else None),
     }
+
+
+# --------------------------------------------------------------------------- #
+# F48 - Historique (US7)                                                      #
+# --------------------------------------------------------------------------- #
+
+
+def list_history(
+    db: Session,
+    *,
+    account_id: UUID,
+    entreprise_id: UUID,
+    limit: int = 6,
+) -> list[dict[str, Any]]:
+    """Retourne les ``limit`` derniers scores tries desc par computed_at.
+
+    RLS-aware via filtre SQL ``account_id``.
+    """
+    rows = db.execute(
+        text(
+            """
+            SELECT id, combine, solvabilite, impact_vert, facteurs,
+                   methodologie_version, coherence_warning, computed_at
+            FROM credit_score
+            WHERE entreprise_id=:e AND account_id=:a
+            ORDER BY computed_at DESC
+            LIMIT :lim
+            """
+        ),
+        {"e": str(entreprise_id), "a": str(account_id), "lim": int(limit)},
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        facteurs = row.facteurs
+        if isinstance(facteurs, str):
+            try:
+                facteurs = json.loads(facteurs)
+            except ValueError:
+                facteurs = []
+        out.append(
+            {
+                "id": row.id,
+                "combine": int(row.combine),
+                "solvabilite": int(row.solvabilite),
+                "impact_vert": int(row.impact_vert),
+                "subscores": compute_subscores(
+                    facteurs if isinstance(facteurs, list) else None
+                ),
+                "methodologie_version": int(row.methodologie_version),
+                "coherence_warning": bool(row.coherence_warning),
+                "computed_at": row.computed_at,
+            }
+        )
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# F48 - Eligibility (US3)                                                     #
+# --------------------------------------------------------------------------- #
+
+
+def _entreprise_profile(
+    db: Session, account_id: UUID, entreprise_id: UUID
+) -> dict[str, Any]:
+    """Retourne {secteur_code, taille_label} pour l'evaluation eligibility."""
+    out: dict[str, Any] = {"secteur_code": None, "taille_label": None}
+    if not _table_exists(db, "entreprise"):
+        return out
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT secteur_code, taille_effectifs
+                FROM entreprise
+                WHERE id=:e AND account_id=:a
+                """
+            ),
+            {"e": str(entreprise_id), "a": str(account_id)},
+        ).fetchone()
+    except Exception:  # noqa: BLE001
+        return out
+    if row is None:
+        return out
+    out["secteur_code"] = row.secteur_code
+    eff = row.taille_effectifs
+    if eff is not None:
+        if eff < 10:
+            out["taille_label"] = "tpe"
+        elif eff < 250:
+            out["taille_label"] = "pme"
+        else:
+            out["taille_label"] = "eti"
+    else:
+        out["taille_label"] = "pme"  # defaut si non renseigne
+    return out
+
+
+_SIZE_ORDER = {"tpe": 0, "pme": 1, "eti": 2}
+
+
+def _eval_rule(
+    rule: EligibilityRule,
+    score: dict[str, Any] | None,
+    profile: dict[str, Any],
+) -> dict[str, Any]:
+    criteria: list[dict[str, Any]] = []
+    has_incomplete = False
+
+    if score is None:
+        # Aucun score -> tous les criteres deviennent incomplete
+        if rule.min_combine_score is not None:
+            criteria.append(
+                {
+                    "code": "min_combine_score",
+                    "label": f"Score credit >= {rule.min_combine_score}",
+                    "threshold": str(rule.min_combine_score),
+                    "actual": None,
+                    "met": False,
+                    "blocking": True,
+                }
+            )
+            has_incomplete = True
+        return {
+            "rule": rule,
+            "status": "incomplete",
+            "primary_reason": "Score credit non calcule",
+            "criteria": criteria,
+        }
+
+    combine = int(score.get("combine") or 0)
+    subscores = score.get("subscores") or {}
+
+    # Critere score combine
+    if rule.min_combine_score is not None:
+        met = combine >= rule.min_combine_score
+        criteria.append(
+            {
+                "code": "min_combine_score",
+                "label": f"Score credit >= {rule.min_combine_score}",
+                "threshold": str(rule.min_combine_score),
+                "actual": str(combine),
+                "met": met,
+                "blocking": True,
+            }
+        )
+
+    # Sous-score ESG
+    if rule.min_subscore_engagement_esg is not None:
+        actual = subscores.get("engagement_esg")
+        if actual is None:
+            criteria.append(
+                {
+                    "code": "min_subscore_engagement_esg",
+                    "label": f"Engagement ESG >= {rule.min_subscore_engagement_esg}",
+                    "threshold": str(rule.min_subscore_engagement_esg),
+                    "actual": None,
+                    "met": False,
+                    "blocking": True,
+                }
+            )
+            has_incomplete = True
+        else:
+            met = int(actual) >= rule.min_subscore_engagement_esg
+            criteria.append(
+                {
+                    "code": "min_subscore_engagement_esg",
+                    "label": f"Engagement ESG >= {rule.min_subscore_engagement_esg}",
+                    "threshold": str(rule.min_subscore_engagement_esg),
+                    "actual": str(int(actual)),
+                    "met": met,
+                    "blocking": True,
+                }
+            )
+
+    # Sous-score solidite financiere
+    if rule.min_subscore_solidite_financiere is not None:
+        actual = subscores.get("solidite_financiere")
+        if actual is None:
+            criteria.append(
+                {
+                    "code": "min_subscore_solidite_financiere",
+                    "label": (
+                        f"Solidite financiere >= "
+                        f"{rule.min_subscore_solidite_financiere}"
+                    ),
+                    "threshold": str(rule.min_subscore_solidite_financiere),
+                    "actual": None,
+                    "met": False,
+                    "blocking": True,
+                }
+            )
+            has_incomplete = True
+        else:
+            met = int(actual) >= rule.min_subscore_solidite_financiere
+            criteria.append(
+                {
+                    "code": "min_subscore_solidite_financiere",
+                    "label": (
+                        f"Solidite financiere >= "
+                        f"{rule.min_subscore_solidite_financiere}"
+                    ),
+                    "threshold": str(rule.min_subscore_solidite_financiere),
+                    "actual": str(int(actual)),
+                    "met": met,
+                    "blocking": True,
+                }
+            )
+
+    # Secteurs exclus
+    secteur = profile.get("secteur_code") or ""
+    if rule.excluded_sectors:
+        excluded = secteur.lower() in {s.lower() for s in rule.excluded_sectors}
+        criteria.append(
+            {
+                "code": "excluded_sectors",
+                "label": "Secteur non exclu",
+                "threshold": "none",
+                "actual": secteur or "non_renseigne",
+                "met": not excluded,
+                "blocking": True,
+            }
+        )
+
+    # Taille minimum
+    if rule.required_min_size is not None:
+        size = profile.get("taille_label") or "pme"
+        met = _SIZE_ORDER.get(size, 0) >= _SIZE_ORDER.get(rule.required_min_size, 0)
+        criteria.append(
+            {
+                "code": "required_min_size",
+                "label": f"Taille minimum {rule.required_min_size}",
+                "threshold": rule.required_min_size,
+                "actual": size,
+                "met": met,
+                "blocking": True,
+            }
+        )
+
+    # Determiner statut
+    if has_incomplete:
+        primary = next(
+            (
+                c["label"] + " : donnee manquante"
+                for c in criteria
+                if not c["met"] and c["actual"] is None
+            ),
+            "Donnees insuffisantes",
+        )
+        return {
+            "rule": rule,
+            "status": "incomplete",
+            "primary_reason": primary,
+            "criteria": criteria,
+        }
+
+    blocking_failed = [c for c in criteria if not c["met"] and c["blocking"]]
+    if blocking_failed:
+        primary = blocking_failed[0]["label"]
+        return {
+            "rule": rule,
+            "status": "not_eligible",
+            "primary_reason": primary,
+            "criteria": criteria,
+        }
+
+    return {
+        "rule": rule,
+        "status": "eligible",
+        "primary_reason": None,
+        "criteria": criteria,
+    }
+
+
+def evaluate_eligibility(
+    db: Session,
+    *,
+    account_id: UUID,
+    entreprise_id: UUID,
+) -> dict[str, Any]:
+    """Evalue l'eligibilite de la PME au catalogue actif."""
+    catalog = active_catalog()
+    try:
+        score = get_latest_score(
+            db, account_id=account_id, entreprise_id=entreprise_id
+        )
+    except CreditScoreNotFound:
+        score = None
+
+    profile = _entreprise_profile(db, account_id, entreprise_id)
+
+    items: list[dict[str, Any]] = []
+    for rule in catalog:
+        evaluated = _eval_rule(rule, score, profile)
+        rule_obj = evaluated["rule"]
+        items.append(
+            {
+                "code": rule_obj.code,
+                "label": rule_obj.label,
+                "description": rule_obj.description,
+                "status": evaluated["status"],
+                "primary_reason": evaluated["primary_reason"],
+                "criteria": evaluated["criteria"],
+                "matching_offer_query": rule_obj.matching_offer_query,
+                "source_id": rule_obj.source_id,
+                "version": rule_obj.version,
+                "valid_from": rule_obj.valid_from,
+                "valid_to": rule_obj.valid_to,
+            }
+        )
+    catalog_version_max = max((r.version for r in catalog), default=0)
+    return {
+        "items": items,
+        "evaluated_at": datetime.now(UTC),
+        "catalog_version_max": catalog_version_max,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# F48 - Recommendations (US4)                                                 #
+# --------------------------------------------------------------------------- #
+
+
+def _has_action_item_table(db: Session) -> bool:
+    return _table_exists(db, "action_item")
+
+
+def list_recommendations(
+    db: Session,
+    *,
+    account_id: UUID,
+    entreprise_id: UUID,
+    limit: int = 5,
+) -> dict[str, Any]:
+    """Selectionne les top-N actions F45 ciblant les sous-scores faibles.
+
+    Strategie (clarif Q1) : tri ASC des sous-scores, on prend les actions
+    rattachees au bucket le plus faible, puis on elargit aux suivants tant
+    qu'on n'atteint pas ``limit``. Filtre par impact > 0, tri desc par impact.
+    """
+    if not _has_action_item_table(db):
+        return {"items": [], "selected_subscores": []}
+
+    # Score courant pour identifier les buckets faibles
+    try:
+        score = get_latest_score(
+            db, account_id=account_id, entreprise_id=entreprise_id
+        )
+    except CreditScoreNotFound:
+        return {"items": [], "selected_subscores": []}
+
+    subscores = score.get("subscores") or {}
+    # Trier les buckets par valeur (None traite comme 0 = priorite max)
+    ranked_buckets = sorted(
+        SUBSCORE_BUCKETS,
+        key=lambda b: (
+            subscores.get(b) if subscores.get(b) is not None else -1
+        ),
+    )
+
+    # Verifier que les colonnes F45 sont presentes (graceful skip sinon)
+    try:
+        has_cols = db.execute(
+            text(
+                """
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name='action_item'
+                  AND column_name IN ('target_subscore',
+                                      'estimated_credit_points_impact')
+                """
+            )
+        ).fetchall()
+    except Exception:  # noqa: BLE001
+        return {"items": [], "selected_subscores": []}
+    if len({r.column_name for r in has_cols}) < 2:
+        return {"items": [], "selected_subscores": []}
+
+    selected: list[dict[str, Any]] = []
+    selected_subscores: list[str] = []
+    for bucket in ranked_buckets:
+        if len(selected) >= limit:
+            break
+        try:
+            rows = db.execute(
+                text(
+                    """
+                    SELECT id, title, description, target_subscore,
+                           estimated_credit_points_impact
+                    FROM action_item
+                    WHERE account_id=:a
+                      AND target_subscore=:b
+                      AND estimated_credit_points_impact > 0
+                    ORDER BY estimated_credit_points_impact DESC
+                    """
+                ),
+                {"a": str(account_id), "b": bucket},
+            ).fetchall()
+        except Exception:  # noqa: BLE001
+            return {"items": [], "selected_subscores": []}
+        if not rows:
+            continue
+        selected_subscores.append(bucket)
+        for r in rows:
+            if len(selected) >= limit:
+                break
+            selected.append(
+                {
+                    "step_id": r.id,
+                    "title": r.title,
+                    "description": r.description,
+                    "target_subscore": r.target_subscore,
+                    "estimated_credit_points_impact": int(
+                        r.estimated_credit_points_impact
+                    ),
+                }
+            )
+    # Tri global desc par impact
+    selected.sort(
+        key=lambda x: x["estimated_credit_points_impact"], reverse=True
+    )
+    return {"items": selected[:limit], "selected_subscores": selected_subscores}

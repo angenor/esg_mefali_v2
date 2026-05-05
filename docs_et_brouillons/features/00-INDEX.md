@@ -201,9 +201,9 @@ Ces invariants viennent du Module 0 du brainstorming et doivent être respectés
 Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté volontairement à l'état de squelette d'auth** (login/register/reset). Toutes les pages produit sont marquées DEFERRED dans les `manual-tests-XX.md`. Cette phase reprend chaque "scope UI DEFERRED" et le découpe en sous-features livrables, en commençant par les fondations design transverses.
 
 ### Phase A — Fondations design (préalable à tout)
-- **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy)
-- **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.)
-- **F38** App Shell, Layout & Navigation (sidebar, header, layouts, middlewares route)
+- **F36** Design System & Tokens (palette, typo, spacing, motion, dark mode strategy) — _in-implementation_, voir [specs/036-design-system-tokens/](../../specs/036-design-system-tokens/)
+- **F37** UI Primitives Library (~27 atomes : Button, Input, Modal, Toast, Card, etc.) — _done_ (2026-05-03), voir [specs/037-ui-primitives/](../../specs/037-ui-primitives/)
+- **F38** App Shell, Layout & Navigation (sidebar, header, layouts, middlewares route) — _done_ (2026-05-03), voir [specs/038-app-shell-navigation/](../../specs/038-app-shell-navigation/)
 
 ### Phase B — Briques transversales LLM/chat
 - **F39** Bottom Sheet Engine — UI de F15 (`ask_*`, `show_form`, `show_summary_card`)
@@ -215,21 +215,21 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **F43** Profile Entreprise & Projets UI — UI de F11 + F12-profile-projets
 
 ### Phase D — Tableaux de bord & visualisations métier
-- **F44** Dashboard PME — UI de F32 (cartes scores, carbone, crédit, candidatures, plan, attestations)
-- **F45** Plan d'action ESG UI — UI de F31 (timeline horizontal, cards étapes, drawer édition)
+- **F44** Dashboard PME — UI de F32 (cartes scores, carbone, crédit, candidatures, plan, attestations) — `ready` (specs/044-dashboard-pme-ui/)
+- **F45** Plan d'action ESG UI — UI de F31 (timeline horizontal, cards étapes, drawer édition) — _US11 (historique versions) reportée : nécessite endpoint backend `GET /me/action-plan/versions` non livré par F31 ; US12 (export PDF) reportée derrière flag `NUXT_PUBLIC_FEATURE_PLAN_EXPORT_PDF` jusqu'à livraison F51._
 - **F46** Scoring ESG visualisations — UI de F23 (radar, drilldown, multi-référentiels)
-- **F47** Empreinte carbone UI — UI de F28 (Scope 1/2/3 donut, drilldown, comparateur facteurs)
+- **F47** Empreinte carbone UI — UI de F28 (Scope 1/2/3 donut, drilldown, comparateur facteurs) — `done` (specs/047-empreinte-carbone-ui/) — _US7 (sync chat) couverte par useCarbon ; US8 (comparateur IPCC) désactivée MVP ; US9 (export PDF) délégation derrière F51._
 - **F48** Credit scoring UI — UI de F29 (gauge, sub-scores, badges éligibilité, recos)
 
 ### Phase E — Documents, rapports, attestations
-- **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30
-- **F50** Documents upload + OCR viewer UI — UI de F22
+- **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30 — `in-progress` (specs/049-rapports-attestations-ui/) — _Phases 1–7 livrées (US1–US6) ; phase 8 polish : T060/T063/T064 ✓, audits Lighthouse/a11y/no-JS et coverage finale à dérouler._
+- **F50** Documents upload + OCR viewer UI — UI de F22 — `ready` (specs/050-documents-ocr-ui/) — _Phases 1–10 livrées (US1–US8) ; phase 11 polish : T085 (a11y axe) ✓, T086 (perf 200 docs) ✓, T087 (security review C1+H2+H4-H6 corrigés) ✓, T088 (purge_documents 93%) ✓, T089 (useFileFingerprint 100%) ✓, T090–T091 ✓, T092 quickstart manuel à dérouler._
 
 ### Phase F — Matching, candidatures, simulateur
-- **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27
+- **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27 — _Phase 7 (Polish) en cours : tests perf (T098-T099) + a11y (T100-T101) livrés ; coverage backend ciblé ≥80 % à atteindre une fois les suites US1-US4 complètes (cf. specs/051-matching-candidatures-simulateur-ui/tasks.md)._
 
 ### Phase G — Notifications & extension panneau
-- **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export
+- **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export — `done` (specs/052-notifications-settings-extension/) — _Phases 1–10 livrées (US1–US7) ; sidepanel MV3 < 200 kB gzip, mini-chat IA + offres recommandées, push système `chrome.notifications` sur deadline_j_minus_1, suppression compte J+30, audit log F52 testé (test_f52_coverage.py)._
 
 ### Sprint UI recommandé
 

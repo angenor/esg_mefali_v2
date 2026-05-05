@@ -64,6 +64,21 @@
       const hit = patterns.find((p) => matches(url, p));
       if (hit) {
         showBanner(hit.offre_label || hit.pattern || "");
+        // F52 US4 — signaler le match au background pour ouvrir le sidepanel.
+        // Aucun payload tenant transmis : seuls host/path/pattern_id partent.
+        try {
+          const u = new URL(url);
+          chrome.runtime.sendMessage({
+            type: "URL_DETECTED",
+            payload: {
+              host: u.host,
+              path: u.pathname + (u.search || ""),
+              pattern_id: hit.id || null,
+            },
+          });
+        } catch (_e) {
+          // ignore parsing errors
+        }
       } else {
         clearBanner();
       }

@@ -13,6 +13,8 @@ from app.db import get_db
 from app.models.account_user import AccountUser
 from app.scoring.schemas import (
     ScoreDetailOut,
+    ScoreHistoryEntry,
+    ScoreHistoryOut,
     ScoreListOut,
     ScoreSummaryOut,
 )
@@ -21,6 +23,7 @@ from app.scoring.service import (
     ReferentielNotFound,
     compute_and_persist,
     get_latest_score_detail,
+    list_history,
     list_latest_scores,
 )
 
@@ -88,6 +91,49 @@ def get_score_detail(
     if detail is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return ScoreDetailOut(**detail)
+
+
+@router.get(
+    "/{entity_type}/{entity_id}/{referentiel_code}/history",
+    response_model=ScoreHistoryOut,
+)
+def list_score_history(
+    entity_type: str,
+    entity_id: uuid.UUID,
+    referentiel_code: str,
+    limit: int = Query(12, ge=1, le=50),
+    db: Session = Depends(get_db),
+    user: AccountUser = Depends(get_current_pme),
+) -> ScoreHistoryOut:
+    """F46 — Retourne l'historique des calculs pour ``(entity, referentiel)``."""
+    _validate_entity_type(entity_type)
+    if user.account_id is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+    try:
+        rows = list_history(
+            db,
+            account_id=user.account_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            referentiel_code=referentiel_code,
+            limit=limit,
+        )
+    except ReferentielNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"référentiel non publié: {exc}",
+        ) from exc
+    except EntityNotAccessible as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="entité hors tenant",
+        ) from exc
+    return ScoreHistoryOut(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        referentiel_code=referentiel_code,
+        entries=[ScoreHistoryEntry(**r) for r in rows],
+    )
 
 
 @router.post(

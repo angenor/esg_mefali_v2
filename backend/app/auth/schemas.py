@@ -31,6 +31,7 @@ class RegisterIn(BaseModel):
 class LoginIn(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1)
+    remember_me: bool = False
 
 
 class ForgotIn(BaseModel):
@@ -58,6 +59,7 @@ class MeOut(BaseModel):
     email: EmailStr
     created_at: datetime
     last_login_at: datetime | None = None
+    email_verified_at: datetime | None = None
 
 
 class NeutralAck(BaseModel):

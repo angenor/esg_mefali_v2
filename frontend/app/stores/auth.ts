@@ -1,4 +1,4 @@
-// F02 T027 — Pinia store auth
+// F02 T027 — Pinia store auth (étendu F38 : logout, isAuthenticated, raison_sociale)
 import { defineStore } from "pinia"
 
 export type UserRole = "pme" | "admin"
@@ -8,8 +8,10 @@ export interface MeOut {
   account_id: string | null
   role: UserRole
   email: string
+  raison_sociale?: string | null
   created_at: string
   last_login_at: string | null
+  email_verified_at?: string | null
 }
 
 export const useAuthStore = defineStore("auth", {
@@ -17,6 +19,9 @@ export const useAuthStore = defineStore("auth", {
     user: null as MeOut | null,
     loading: false as boolean,
   }),
+  getters: {
+    isAuthenticated: (s): boolean => !!s.user,
+  },
   actions: {
     setUser(u: MeOut | null) {
       this.user = u
@@ -36,6 +41,35 @@ export const useAuthStore = defineStore("auth", {
         this.user = null
       } finally {
         this.loading = false
+      }
+    },
+    async logout() {
+      try {
+        const config = useRuntimeConfig()
+        const { withCsrf } = useCsrf()
+        await $fetch(`${config.public.apiBase}/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          headers: withCsrf(),
+        })
+      } catch {
+        // session côté serveur déjà invalide : on continue le nettoyage local
+      } finally {
+        this.user = null
+        try {
+          const notif = useNotificationsStore()
+          notif.reset()
+        } catch {
+          // store non disponible (SSR / hors layout PME)
+        }
+        // F44 T067 — purge le store dashboard sur logout (cloisonnement strict, FR-019).
+        try {
+          const { useDashboardStore } = await import("~/stores/dashboard")
+          useDashboardStore().reset()
+        } catch {
+          // store non disponible
+        }
+        await navigateTo("/login")
       }
     },
   },

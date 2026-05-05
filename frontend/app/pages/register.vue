@@ -1,72 +1,113 @@
 <script setup lang="ts">
-// F02 T030 — Page d'inscription PME
-const email = ref("")
-const password = ref("")
-const error = ref<string | null>(null)
-const submitting = ref(false)
+// F42 T028 — Wizard register 3 steps
+import { ref } from "vue"
+import RegisterProgressBar from "~/components/auth/RegisterProgressBar.vue"
+import RegisterStepIdentifiants from "~/components/auth/RegisterStepIdentifiants.vue"
+import RegisterStepEntreprise from "~/components/auth/RegisterStepEntreprise.vue"
+import RegisterStepConsentements from "~/components/auth/RegisterStepConsentements.vue"
+import { useT } from "~/composables/useT"
+
+definePageMeta({
+  layout: "auth",
+  public: true,
+  title: "Créer un compte",
+})
+
+const { t } = useT()
 const router = useRouter()
 const { register } = useAuth()
 
-async function onSubmit() {
+interface Draft {
+  email: string
+  password: string
+  raison_sociale: string
+  secteur: string
+  cgu: boolean
+  rgpd: boolean
+}
+
+const TOTAL = 3
+const currentStep = ref<1 | 2 | 3>(1)
+const submitting = ref(false)
+const error = ref<string | null>(null)
+
+const draft = ref<Draft>({
+  email: "",
+  password: "",
+  raison_sociale: "",
+  secteur: "",
+  cgu: false,
+  rgpd: false,
+})
+
+function onStep1(data: { email: string; password: string }) {
+  draft.value = { ...draft.value, ...data }
+  currentStep.value = 2
+}
+
+function onStep2(data: { raison_sociale: string; secteur: string }) {
+  draft.value = { ...draft.value, ...data }
+  currentStep.value = 3
+}
+
+async function onStep3(data: { cgu: boolean; rgpd: boolean }) {
+  draft.value = { ...draft.value, ...data }
   error.value = null
   submitting.value = true
   try {
-    await register({ email: email.value, password: password.value })
-    await router.push("/")
+    await register({ email: draft.value.email, password: draft.value.password })
+    await router.push("/onboarding/welcome")
   } catch (e: unknown) {
     const code = (e as { data?: { detail?: { code?: string } } })?.data?.detail?.code
-    if (code === "email_already_used") {
-      error.value = "Cet email est déjà utilisé."
-    } else {
-      error.value = "Échec de l'inscription. Vérifiez votre saisie."
-    }
+    error.value =
+      code === "email_already_used"
+        ? t("auth.register.error_email_used")
+        : t("auth.register.error_generic")
   } finally {
     submitting.value = false
   }
 }
+
+function goBack() {
+  if (currentStep.value > 1) currentStep.value = (currentStep.value - 1) as 1 | 2
+}
 </script>
 
 <template>
-  <main class="max-w-md mx-auto py-12 px-4">
-    <h1 class="text-2xl font-bold mb-6">Créer un compte PME</h1>
-    <form class="space-y-4" @submit.prevent="onSubmit">
-      <div>
-        <label for="email" class="block text-sm font-medium">Email</label>
-        <input
-          id="email"
-          v-model="email"
-          type="email"
-          required
-          autocomplete="email"
-          class="mt-1 w-full border rounded px-3 py-2"
-        />
-      </div>
-      <div>
-        <label for="password" class="block text-sm font-medium">Mot de passe</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          minlength="12"
-          autocomplete="new-password"
-          class="mt-1 w-full border rounded px-3 py-2"
-        />
-        <p class="text-xs text-gray-500 mt-1">
-          12 caractères min., 1 majuscule, 1 minuscule, 1 chiffre.
-        </p>
-      </div>
-      <p v-if="error" class="text-red-600 text-sm">{{ error }}</p>
-      <button
-        type="submit"
-        :disabled="submitting"
-        class="w-full bg-black text-white py-2 rounded disabled:opacity-50"
-      >
-        {{ submitting ? "Création..." : "Créer mon compte" }}
-      </button>
-    </form>
-    <p class="mt-4 text-sm">
-      Déjà un compte ? <NuxtLink to="/login" class="underline">Se connecter</NuxtLink>
+  <main class="max-w-md w-full mx-auto py-8 px-4 space-y-6" data-testid="register-wizard">
+    <header class="space-y-2">
+      <h1 class="text-2xl font-bold">{{ t("auth.register.title") }}</h1>
+      <p class="text-sm text-gray-600">{{ t("auth.register.subtitle") }}</p>
+    </header>
+
+    <RegisterProgressBar :step="currentStep" :total="TOTAL" />
+
+    <RegisterStepIdentifiants
+      v-if="currentStep === 1"
+      :initial="{ email: draft.email, password: draft.password }"
+      @next="onStep1"
+    />
+    <RegisterStepEntreprise
+      v-else-if="currentStep === 2"
+      :initial="{ raison_sociale: draft.raison_sociale, secteur: draft.secteur }"
+      @next="onStep2"
+      @previous="goBack"
+    />
+    <RegisterStepConsentements
+      v-else
+      :initial="{ cgu: draft.cgu, rgpd: draft.rgpd }"
+      :submitting="submitting"
+      @next="onStep3"
+      @previous="goBack"
+    />
+
+    <p v-if="error" class="text-sm text-red-600" role="alert">{{ error }}</p>
+
+    <p class="text-sm text-gray-600 text-center">
+      {{ t("auth.register.have_account") }}
+      <NuxtLink to="/login" class="underline text-brand-700">
+        {{ t("auth.register.login_link") }}
+      </NuxtLink>
     </p>
   </main>
 </template>
