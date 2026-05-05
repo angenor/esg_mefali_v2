@@ -2,7 +2,7 @@
 // F51 T085 — 4 sliders + ARIA + formatMoney.
 import { computed } from "vue"
 import { useSimulateurStore } from "~/stores/simulateur"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 import type { TypeInvestissement } from "~/types/simulateur"
 
 const store = useSimulateurStore()

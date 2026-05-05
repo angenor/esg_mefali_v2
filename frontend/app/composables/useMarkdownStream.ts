@@ -32,12 +32,17 @@ const md = new MarkdownIt({
 })
 md.enable(['table'])
 
-DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A') {
-    node.setAttribute('rel', 'noopener noreferrer')
-    node.setAttribute('target', '_blank')
-  }
-})
+// DOMPurify dépend de `window` ; au SSR (Vite/Node) `default.addHook` n'existe pas.
+// Sans ce guard, /chat/[thread_id] renvoie 500 avant que le middleware d'auth client
+// ne puisse rediriger non-auth vers /login.
+if (typeof window !== 'undefined' && typeof DOMPurify.addHook === 'function') {
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.tagName === 'A') {
+      node.setAttribute('rel', 'noopener noreferrer')
+      node.setAttribute('target', '_blank')
+    }
+  })
+}
 
 const PURIFY_CONFIG = {
   ALLOWED_TAGS,

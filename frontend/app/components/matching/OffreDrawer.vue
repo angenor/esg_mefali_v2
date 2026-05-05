@@ -3,7 +3,7 @@
 
 import { computed, watch } from "vue"
 import { useMatchingStore } from "~/stores/matching"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 
 const props = defineProps<{
   open: boolean

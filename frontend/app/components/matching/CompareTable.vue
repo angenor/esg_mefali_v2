@@ -4,7 +4,7 @@
 import { computed, onMounted, ref } from "vue"
 import { offresApi } from "~/services/api/offres"
 import { useComparateur } from "~/composables/useComparateur"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 import type { OffreDetail } from "~/types/matching"
 
 const comparateur = useComparateur()

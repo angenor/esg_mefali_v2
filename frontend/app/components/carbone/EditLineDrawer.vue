@@ -6,7 +6,7 @@
 // Le rendu UI est assuré par <ChatBottomSheet> (F39) via tool=ask_form.
 
 import { onBeforeUnmount, onMounted } from "vue"
-import { useCarbonEdit, type OpenDrawerArgs, type SubmitArgs } from "~/composables/useCarbonEdit"
+import { useCarbonEdit, type OpenDrawerArgs, type CarbonSubmitArgs } from "~/composables/useCarbonEdit"
 
 const edit = useCarbonEdit()
 
@@ -20,7 +20,7 @@ function onOpen(e: Event): void {
 }
 
 function onSubmit(e: Event): void {
-  const detail = (e as CustomEvent<SubmitArgs>).detail
+  const detail = (e as CustomEvent<CarbonSubmitArgs>).detail
   if (!detail) return
   void edit.submit(detail)
 }

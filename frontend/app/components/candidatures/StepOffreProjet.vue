@@ -2,7 +2,7 @@
 // F51 T059 — Étape 1 : récapitulatif offre + projet.
 import { computed } from "vue"
 import { useCandidaturesStore } from "~/stores/candidatures"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 
 const store = useCandidaturesStore()
 const detail = computed(() => store.detail)
