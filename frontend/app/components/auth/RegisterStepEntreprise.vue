@@ -26,7 +26,6 @@ const secteurQuery = ref(props.initial?.secteur ?? "")
 const selectedSecteur = ref(props.initial?.secteur ?? "")
 const suggestions = ref<SecteurOption[]>([])
 const showSuggestions = ref(false)
-const submitted = ref(false)
 
 const config = useRuntimeConfig()
 
@@ -56,16 +55,21 @@ function pick(s: SecteurOption) {
   showSuggestions.value = false
 }
 
+function onSecteurBlur() {
+  window.setTimeout(() => {
+    showSuggestions.value = false
+  }, 150)
+}
+
 const canSubmit = computed(
-  () => raisonSociale.value.trim().length >= 2 && selectedSecteur.value.length > 0,
+  () => raisonSociale.value.trim().length >= 2 && secteurQuery.value.trim().length >= 2,
 )
 
 function onSubmit() {
-  submitted.value = true
   if (!canSubmit.value) return
   emit("next", {
     raison_sociale: raisonSociale.value.trim(),
-    secteur: selectedSecteur.value,
+    secteur: (selectedSecteur.value || secteurQuery.value).trim(),
   })
 }
 </script>
@@ -100,8 +104,7 @@ function onSubmit() {
         autocomplete="off"
         class="mt-1 w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500"
         @focus="showSuggestions = true"
-        @blur="setTimeout(() => (showSuggestions = false), 150)"
-        @input="selectedSecteur = ''"
+        @blur="onSecteurBlur"
       />
       <ul
         v-if="showSuggestions && suggestions.length"
@@ -116,12 +119,6 @@ function onSubmit() {
           {{ s.label }}
         </li>
       </ul>
-      <p
-        v-if="submitted && !selectedSecteur"
-        class="text-xs text-red-600 mt-1"
-      >
-        {{ t("auth.register.step2.secteur_required") }}
-      </p>
     </div>
 
     <div class="flex justify-between">
