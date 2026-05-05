@@ -27,6 +27,42 @@ ALLOWED_VALID_MONTHS = {3, 6, 12}
 SCHEMA_VERSION = "v1"
 
 
+def _purge_verify_cache(public_id: uuid.UUID) -> None:
+    """F49 T010 — Hook d'invalidation CDN sur révocation.
+
+    No-op par défaut : aucune `CDN_PURGE_URL` n'est configurée dans le MVP.
+    En production, ce hook fera un POST vers le CDN. Le TTL ≤ 60 s côté
+    routeRules Nuxt garantit déjà SC-009.
+    """
+    import logging
+    import os
+
+    purge_url = os.environ.get("CDN_PURGE_URL")
+    if not purge_url:
+        logging.getLogger(__name__).debug(
+            "attestations.cdn_purge skipped (no CDN_PURGE_URL) public_id=%s",
+            public_id,
+        )
+        return
+    # Hypothèse minimaliste : POST {urls: [...]}.
+    try:  # pragma: no cover - dépend d'env externe
+        import urllib.request
+
+        req = urllib.request.Request(
+            purge_url,
+            data=(
+                f'{{"urls":["/verify/{public_id}","/verify/{public_id}/json"]}}'
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=2)  # noqa: S310 - URL configurée
+    except Exception:
+        logging.getLogger(__name__).warning(
+            "attestations.cdn_purge_failed public_id=%s", public_id
+        )
+
+
 class AttestationError(Exception):
     """Base for attestation domain errors."""
 
@@ -248,6 +284,14 @@ class AttestationService:
             account_id=row.account_id,
             user_id=actor_id,
         )
+        # F49 T010 — invalidation explicite du cache CDN sur /verify/{public_id}.
+        # En dev/test : no-op silencieux. En prod : appel HTTP au CDN (à brancher
+        # via variable d'env CDN_PURGE_URL ; pas configuré dans MVP).
+        try:
+            _purge_verify_cache(row.public_id)
+        except Exception:  # noqa: BLE001
+            # Best-effort : la révocation ne doit jamais échouer pour ça.
+            pass
         return row
 
     def revoke_by_pme(

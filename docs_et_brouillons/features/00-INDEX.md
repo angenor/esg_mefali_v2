@@ -222,7 +222,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **F48** Credit scoring UI — UI de F29 (gauge, sub-scores, badges éligibilité, recos)
 
 ### Phase E — Documents, rapports, attestations
-- **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30
+- **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30 — `in-progress` (specs/049-rapports-attestations-ui/) — _Phases 1–7 livrées (US1–US6) ; phase 8 polish : T060/T063/T064 ✓, audits Lighthouse/a11y/no-JS et coverage finale à dérouler._
 - **F50** Documents upload + OCR viewer UI — UI de F22
 
 ### Phase F — Matching, candidatures, simulateur

@@ -97,6 +97,8 @@ def _to_public(att: Attestation, app_url: str) -> PublicVerification:
         generated_at=att.generated_at,
         valid_until=att.valid_until,
         revoked_at=att.revoked_at,
+        # F49 T009 — expose le motif de révocation dans le payload public.
+        revoke_reason=getattr(att, "revoked_reason", None),
         scores={
             k: v for k, v in att.scores_inclus_json.items() if not k.startswith("__")
         },
@@ -105,6 +107,9 @@ def _to_public(att: Attestation, app_url: str) -> PublicVerification:
         signature_ed25519=att.signature_ed25519,
         pubkey_fingerprint=att.pubkey_fingerprint,
         download_url=f"{base}/verify/{att.public_id}/download",
+        # F49 T009 — `indicators` est rempli post-MVP par le catalogue F40 ;
+        # rétrocompat assurée par défaut [].
+        indicators=[],
     )
 
 

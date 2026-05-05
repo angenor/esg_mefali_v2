@@ -15,6 +15,16 @@ export default defineNuxtConfig({
   // Précédent F47 (commit c14899e).
   routeRules: {
     "/credit-score": { ssr: false },
+    // F49 T005 — page publique /verify : SSR + cache CDN court (≤ 60 s)
+    // avec stale-while-revalidate. L'invalidation explicite du CDN à la
+    // révocation est gérée côté backend (cf. T010).
+    "/verify/**": {
+      swr: 60,
+      headers: {
+        "Cache-Control":
+          "public, max-age=0, s-maxage=60, stale-while-revalidate=60",
+      },
+    },
   },
 
   // F02 — Sécurité : headers HSTS, CSP minimal, X-Frame-Options, cookies par défaut.

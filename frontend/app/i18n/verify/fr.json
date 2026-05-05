@@ -1,0 +1,65 @@
+{
+  "lang_label": "Français",
+  "header": {
+    "title": "Vérification d'attestation",
+    "subtitle": "Page publique"
+  },
+  "badge": {
+    "valid": "Signature valide",
+    "invalid": "Signature invalide"
+  },
+  "status": {
+    "active": "Active",
+    "expired": "Expirée",
+    "revoked": "Révoquée"
+  },
+  "revoked_banner": {
+    "title": "Attestation révoquée",
+    "revoked_at": "Révoquée le {date}",
+    "reason_label": "Motif"
+  },
+  "identity": {
+    "legal_name": "Raison sociale",
+    "type": "Type",
+    "issued_at": "Émise le",
+    "expires_at": "Expire le"
+  },
+  "payload": {
+    "indicators_title": "Indicateurs publiés",
+    "sources_title": "Sources",
+    "no_indicators": "Aucun indicateur publié."
+  },
+  "explainer": {
+    "title": "Qu'est-ce qu'une attestation ESG Mefali ?",
+    "body": "Une attestation ESG Mefali est un document signé numériquement qui atteste de scores ESG calculés à partir de référentiels vérifiés.",
+    "doc_link": "En savoir plus"
+  },
+  "footer": {
+    "legal": "Mentions légales",
+    "rgpd": "RGPD",
+    "about": "À propos"
+  },
+  "actions": {
+    "download_pdf": "Télécharger l'attestation (PDF)"
+  },
+  "errors": {
+    "not_found_title": "Attestation introuvable",
+    "not_found_body": "Le lien que vous avez ouvert ne correspond à aucune attestation valide.",
+    "server_title": "Service indisponible",
+    "server_body": "Veuillez réessayer dans quelques instants."
+  },
+  "date_format": "dd/MM/yyyy",
+  "revoke_reason": {
+    "erreur_emission": "Erreur d'émission",
+    "donnees_invalidees": "Données invalidées",
+    "demande_pme": "Demande de la PME",
+    "expiration_anticipee": "Expiration anticipée",
+    "autre": "Autre motif"
+  },
+  "attestation_type": {
+    "conformite_esg": "Conformité ESG",
+    "bilan_carbone": "Bilan carbone",
+    "score_credit": "Score crédit",
+    "dossier_candidature": "Dossier de candidature"
+  }
+}
