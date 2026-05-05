@@ -83,10 +83,7 @@ function toggle() {
               props.collapsed ? 'justify-center' : 'gap-3',
             ]"
           >
-            <span
-              :class="['inline-block w-5 h-5 shrink-0', `i-shell-${item.icon}`]"
-              aria-hidden="true"
-            />
+            <UiIcon :name="item.icon" class="w-5 h-5 shrink-0" />
             <span v-if="!props.collapsed" class="truncate">{{ item.label }}</span>
             <UiTooltip v-else :label="item.label" />
             <UiBadge
@@ -111,7 +108,7 @@ function toggle() {
             ]"
             data-testid="nav-notifications"
           >
-            <span class="inline-block w-5 h-5 shrink-0 i-shell-bell" aria-hidden="true" />
+            <UiIcon name="bell" class="w-5 h-5 shrink-0" />
             <span v-if="!props.collapsed" class="truncate">Notifications</span>
             <UiBadge
               v-if="!props.collapsed && unreadCount > 0"

@@ -8,17 +8,18 @@ interface SheetItem {
   id: string
   label: string
   to: string
+  icon: string
 }
 
 const ITEMS: ReadonlyArray<SheetItem> = [
-  { id: 'projets', label: 'Projets', to: '/profil/projets' },
-  { id: 'scoring', label: 'Scoring ESG', to: '/scoring' },
-  { id: 'carbone', label: 'Empreinte carbone', to: '/carbone' },
-  { id: 'credit', label: 'Score crédit', to: '/credit' },
-  { id: 'candidatures', label: 'Candidatures', to: '/candidatures' },
-  { id: 'rapports', label: 'Rapports & attestations', to: '/rapports' },
-  { id: 'bibliotheque', label: 'Bibliothèque', to: '/bibliotheque' },
-  { id: 'parametres', label: 'Paramètres', to: '/parametres' },
+  { id: 'projets', label: 'Projets', to: '/profil/projets', icon: 'briefcase' },
+  { id: 'scoring', label: 'Scoring ESG', to: '/scoring', icon: 'chart-bar' },
+  { id: 'carbone', label: 'Empreinte carbone', to: '/carbone', icon: 'cloud' },
+  { id: 'credit', label: 'Score crédit', to: '/credit', icon: 'banknotes' },
+  { id: 'candidatures', label: 'Candidatures', to: '/candidatures', icon: 'document-text' },
+  { id: 'rapports', label: 'Rapports & attestations', to: '/rapports', icon: 'document-check' },
+  { id: 'bibliotheque', label: 'Bibliothèque', to: '/bibliotheque', icon: 'book-open' },
+  { id: 'parametres', label: 'Paramètres', to: '/parametres', icon: 'cog' },
 ]
 
 function onKeydown(e: KeyboardEvent): void {

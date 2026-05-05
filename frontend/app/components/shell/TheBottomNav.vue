@@ -51,7 +51,7 @@ const baseBtn = computed(
         :data-tour="item.id === 'chat' ? 'chat' : item.id === 'profil' ? 'profil' : undefined"
         :style="{ minWidth: '48px', minHeight: '48px' }"
       >
-        <span class="text-base" aria-hidden="true">●</span>
+        <UiIcon :name="item.icon" class="w-5 h-5" />
         <span>{{ item.label }}</span>
       </NuxtLink>
       <button
@@ -62,7 +62,7 @@ const baseBtn = computed(
         :style="{ minWidth: '48px', minHeight: '48px' }"
         @click="emit('open-more')"
       >
-        <span class="text-base" aria-hidden="true">⋯</span>
+        <UiIcon :name="item.icon" class="w-5 h-5" />
         <span>{{ item.label }}</span>
       </button>
     </template>
