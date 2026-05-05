@@ -134,6 +134,8 @@ from app.api.routes.entreprise_documents import router as entreprise_documents_r
 # F50 — Extensions UI documents : fingerprint / validate / link-projet / relaunch.
 from app.api.routes.entreprise_documents_f50 import (  # noqa: E402
     f50_router as entreprise_documents_f50_router,
+)
+from app.api.routes.entreprise_documents_f50 import (
     fingerprint_router as documents_fingerprint_router,
 )
 

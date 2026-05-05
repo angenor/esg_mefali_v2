@@ -420,3 +420,248 @@ def serialize_comparator_row(row: ComparatorRow) -> dict[str, Any]:
         "frais_effectifs": serialize_money(row.frais_effectifs),
         "documents_count": row.documents_count,
     }
+
+
+# ============================================================================
+# F51 — Catalogue listing & detail (GET /me/offres, GET /me/offres/{id}).
+# ============================================================================
+
+from app.core.currencies import PEG_FCFA_EUR as FCFA_PER_EUR  # noqa: E402
+
+# Mapping fallback de fonds_source.type → OffreType. La plupart des seeds
+# utilisent des libellés libres ; on normalise.
+_FONDS_TYPE_TO_OFFRE_TYPE: dict[str, str] = {
+    "subvention": "subvention",
+    "grant": "subvention",
+    "credit": "credit",
+    "loan": "credit",
+    "pret": "credit",
+    "garantie": "garantie",
+    "guarantee": "garantie",
+}
+
+
+def _resolve_offre_type(offre_type: str | None, fonds_type: str | None) -> str:
+    """Override offre.offre_type, sinon mapping fonds_source.type, sinon 'autre'."""
+    if offre_type:
+        return offre_type
+    if fonds_type:
+        normalized = fonds_type.strip().lower()
+        return _FONDS_TYPE_TO_OFFRE_TYPE.get(normalized, "autre")
+    return "autre"
+
+
+def _money_to_eur_int(amount: Decimal | None, currency: str | None) -> int | None:
+    """Convertit un montant en int EUR pour le filtrage SQL (parité 655.957)."""
+    if amount is None or currency is None:
+        return None
+    if currency == "EUR":
+        return int(amount)
+    if currency == "XOF":
+        return int(amount / FCFA_PER_EUR)
+    return None
+
+
+def _build_money(amount: Decimal | None, currency: str | None) -> dict | None:
+    if amount is None or currency is None:
+        return None
+    return {"amount": str(amount), "currency": currency}
+
+
+def _row_to_list_item(row: dict) -> dict:
+    """Sérialise un row catalogue → OffreListItem dict."""
+    geo = None
+    if row.get("geo_lat") is not None and row.get("geo_lng") is not None:
+        geo = {"lat": float(row["geo_lat"]), "lng": float(row["geo_lng"])}
+    inter = {
+        "id": str(row["intermediaire_id"]) if row.get("intermediaire_id") else str(row["fonds_id"]),
+        "nom": row.get("intermediaire_name") or row.get("fonds_name") or "—",
+        "geolocation": geo,
+        "url": None,
+    }
+    secteurs = row.get("secteurs") or []
+    if not secteurs and row.get("fonds_thematique"):
+        secteurs = [str(row["fonds_thematique"]).strip().lower()]
+    return {
+        "offre_id": str(row["offre_id"]),
+        "nom": row.get("offre_name") or row.get("fonds_name") or "Offre",
+        "intermediaire": inter,
+        "type": _resolve_offre_type(row.get("offre_type"), row.get("fonds_type")),
+        "montant_min": _build_money(row.get("plancher_amount"), row.get("plancher_currency")),
+        "montant_max": _build_money(row.get("plafond_amount"), row.get("plafond_currency")),
+        "duree_min_mois": row.get("duree_min_mois"),
+        "duree_max_mois": row.get("duree_max_mois"),
+        "secteurs": list(secteurs) if secteurs else [],
+        "accepted_languages": row.get("accepted_languages") or ["fr"],
+    }
+
+
+def list_offres_for_account(
+    db: Session,
+    *,
+    account_id: UUID,  # noqa: ARG001 — utilisé pour set_config en amont (RLS)
+    filters: dict[str, Any],
+    limit: int = 20,
+) -> list[dict]:
+    """Catalogue d'offres publiées, filtrable. Aucun scoring.
+
+    Le compte courant est posé en amont via ``app.current_account_id`` (RLS),
+    mais ``offre`` n'a pas de ``account_id`` (catalogue partagé) — la
+    visibilité est gouvernée par ``status='published'`` (P7 + F08).
+    """
+    where = ["o.status = 'published'", "f.status = 'published'"]
+    params: dict[str, Any] = {"lim": int(limit)}
+
+    if filters.get("type"):
+        # Filtre type : applique l'override offre.offre_type OU le mapping fonds.type.
+        # Pour rester simple en SQL, on filtre sur offre_type quand non-NULL et sur
+        # fonds_source.type sinon, en faisant le mapping côté Python après lecture.
+        params["type_in"] = filters["type"]
+        where.append(
+            "(o.offre_type = :type_in OR (o.offre_type IS NULL AND lower(f.type) = :type_in))"
+        )
+    if filters.get("intermediaire_id"):
+        params["iid"] = str(filters["intermediaire_id"])
+        where.append("i.id = CAST(:iid AS UUID)")
+    if filters.get("secteur"):
+        params["sect"] = filters["secteur"]
+        where.append("(:sect = ANY(f.secteurs) OR lower(f.thematique) = :sect)")
+    if filters.get("q"):
+        params["q"] = f"%{filters['q'].lower()}%"
+        where.append("(lower(o.name) LIKE :q OR lower(f.name) LIKE :q)")
+    if filters.get("duree_min_mois") is not None:
+        params["dmn"] = int(filters["duree_min_mois"])
+        where.append("(o.duree_max_mois IS NULL OR o.duree_max_mois >= :dmn)")
+    if filters.get("duree_max_mois") is not None:
+        params["dmx"] = int(filters["duree_max_mois"])
+        where.append("(o.duree_min_mois IS NULL OR o.duree_min_mois <= :dmx)")
+    # Filtres montant : effectués post-lecture en Python pour gérer la conversion devise.
+
+    sql = f"""
+        SELECT
+            o.id            AS offre_id,
+            o.name          AS offre_name,
+            o.offre_type    AS offre_type,
+            o.duree_min_mois AS duree_min_mois,
+            o.duree_max_mois AS duree_max_mois,
+            o.accepted_languages AS accepted_languages,
+            f.id            AS fonds_id,
+            f.name          AS fonds_name,
+            f.type          AS fonds_type,
+            f.thematique    AS fonds_thematique,
+            f.secteurs      AS secteurs,
+            f.plafond_amount   AS plafond_amount,
+            f.plafond_currency AS plafond_currency,
+            f.plancher_amount  AS plancher_amount,
+            f.plancher_currency AS plancher_currency,
+            i.id            AS intermediaire_id,
+            i.name          AS intermediaire_name,
+            i.geo_lat       AS geo_lat,
+            i.geo_lng       AS geo_lng
+        FROM offre o
+        JOIN fonds_source f ON f.id = o.fonds_id
+        LEFT JOIN intermediaire i ON i.id = o.intermediaire_id AND i.status = 'published'
+        WHERE {' AND '.join(where)}
+        ORDER BY o.created_at DESC
+        LIMIT :lim
+    """
+    rows = db.execute(text(sql), params).mappings().all()
+    items: list[dict] = []
+    mn_eur = filters.get("montant_min_eur")
+    mx_eur = filters.get("montant_max_eur")
+    for r in rows:
+        item = _row_to_list_item(dict(r))
+        # Filtrage montant en EUR équivalent (parité fixe).
+        plancher_eur = _money_to_eur_int(r["plancher_amount"], r["plancher_currency"])
+        plafond_eur = _money_to_eur_int(r["plafond_amount"], r["plafond_currency"])
+        if mn_eur is not None and plafond_eur is not None and plafond_eur < mn_eur:
+            continue
+        if mx_eur is not None and plancher_eur is not None and plancher_eur > mx_eur:
+            continue
+        items.append(item)
+    return items
+
+
+def get_offre_detail(
+    db: Session,
+    *,
+    account_id: UUID,  # noqa: ARG001
+    offre_id: UUID,
+) -> dict | None:
+    """Détail d'une offre publiée. Renvoie None si invisible / non publiée."""
+    row = db.execute(
+        text(
+            """
+            SELECT
+                o.id            AS offre_id,
+                o.name          AS offre_name,
+                o.offre_type    AS offre_type,
+                o.duree_min_mois AS duree_min_mois,
+                o.duree_max_mois AS duree_max_mois,
+                o.accepted_languages AS accepted_languages,
+                o.criteres_offre_specifiques AS criteres_offre,
+                o.documents_specifiques      AS documents_offre,
+                f.id            AS fonds_id,
+                f.name          AS fonds_name,
+                f.type          AS fonds_type,
+                f.thematique    AS fonds_thematique,
+                f.secteurs      AS secteurs,
+                f.plafond_amount   AS plafond_amount,
+                f.plafond_currency AS plafond_currency,
+                f.plancher_amount  AS plancher_amount,
+                f.plancher_currency AS plancher_currency,
+                f.documents_requis_json AS fonds_documents,
+                i.id            AS intermediaire_id,
+                i.name          AS intermediaire_name,
+                i.geo_lat       AS geo_lat,
+                i.geo_lng       AS geo_lng,
+                i.documents_requis_json AS intermediaire_documents
+            FROM offre o
+            JOIN fonds_source f ON f.id = o.fonds_id AND f.status = 'published'
+            LEFT JOIN intermediaire i ON i.id = o.intermediaire_id AND i.status = 'published'
+            WHERE o.id = CAST(:oid AS UUID) AND o.status = 'published'
+            """
+        ),
+        {"oid": str(offre_id)},
+    ).mappings().first()
+    if row is None:
+        return None
+    base = _row_to_list_item(dict(row))
+
+    # Documents requis = union fonds_source.documents_requis_json + intermediaire.documents_requis_json
+    # + offre.documents_specifiques. Format permissif (le seed est libre — on gère best-effort).
+    docs: list[dict] = []
+    seen: set[str] = set()
+    for raw in (
+        row.get("fonds_documents") or [],
+        row.get("intermediaire_documents") or [],
+        row.get("documents_offre") or [],
+    ):
+        if not isinstance(raw, list):
+            continue
+        for it in raw:
+            if isinstance(it, dict):
+                key = str(it.get("key") or it.get("name") or it.get("label") or "").strip()
+                label = str(it.get("label") or it.get("name") or key)
+                fmt = str(it.get("format") or "pdf")
+            elif isinstance(it, str):
+                key = it.strip().lower().replace(" ", "_")
+                label = it
+                fmt = "pdf"
+            else:
+                continue
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            docs.append({"key": key, "label": label, "format": fmt})
+
+    base.update(
+        {
+            "description": row.get("fonds_thematique") or "",
+            "documents_requis": docs,
+            "conditions": [],
+            "lien_externe": None,
+            "source_id": None,
+        }
+    )
+    return base

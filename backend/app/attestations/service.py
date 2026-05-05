@@ -52,7 +52,7 @@ def _purge_verify_cache(public_id: uuid.UUID) -> None:
             purge_url,
             data=(
                 f'{{"urls":["/verify/{public_id}","/verify/{public_id}/json"]}}'
-            ).encode("utf-8"),
+            ).encode(),
             headers={"Content-Type": "application/json"},
             method="POST",
         )

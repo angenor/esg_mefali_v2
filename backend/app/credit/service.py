@@ -19,13 +19,13 @@ from sqlalchemy.orm import Session
 
 from app.audit import SourceOfChange, record_audit
 from app.credit.csv_parser import parse_statement
+from app.credit.eligibility_catalog import EligibilityRule, active_catalog
 from app.credit.engine import (
     DEFAULT_METHODOLOGY,
     ScoringInputs,
     compute_full_score,
 )
 from app.credit.schemas import CreditDataKind
-from app.credit.eligibility_catalog import EligibilityRule, active_catalog
 from app.credit.subscore_mapping import FACTOR_TO_BUCKET, SUBSCORE_BUCKETS
 
 

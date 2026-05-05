@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_pme
@@ -25,7 +26,6 @@ from app.projets.documents_service import (
 )
 from app.projets.validators import ValidationError as ProjetValidationError
 from app.storage.local import LocalStorage
-from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 

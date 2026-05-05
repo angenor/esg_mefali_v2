@@ -8,6 +8,7 @@ Coherence : reutilise le pattern F25 (matching/service.py) pour les SQL `text()`
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -25,9 +26,13 @@ from app.simulation.calculator import (
 )
 from app.simulation.schemas import (
     ComparatorResult,
+    DecompositionPct,
+    FormulaRef,
     Instrument,
+    MensualiteEntry,
     SimulationHypotheses,
     SimulationResult,
+    SimulationResults,
 )
 
 
@@ -363,3 +368,302 @@ def compare(
         )
     rows.sort(key=lambda r: r.cout_total.amount)
     return ComparatorResult(projet_id=projet_id, rows=rows)
+
+
+# ---------- F51 — Mode pedagogique (preview) ----------
+
+# Defaults pedagogiques pour le mode preview (sans projet/offre).
+_PREVIEW_DEFAULT_MONTANT: Money = Money(amount=Decimal("100000"), currency=Currency.EUR)
+_PREVIEW_DEFAULT_DUREE_MOIS: int = 60
+_PREVIEW_DEFAULT_TAUX_PCT: Decimal = Decimal("4")
+_PREVIEW_DEFAULT_PART_SUBV_PCT: Decimal = Decimal("0")
+
+# Facteurs CO2 pedagogiques par type d'investissement (tonnes CO2 evitees / EUR).
+# Source : ordre de grandeur ADEME (2024) — chiffres indicatifs MVP.
+_PREVIEW_CO2_FACTOR_PER_EUR: dict[str, Decimal] = {
+    "renouvelable_solaire": Decimal("1") / Decimal("2000"),
+    "renouvelable_eolien": Decimal("1") / Decimal("1500"),
+    "efficacite_energetique": Decimal("1") / Decimal("3000"),
+    "agriculture_durable": Decimal("1") / Decimal("5000"),
+    "mobilite_electrique": Decimal("1") / Decimal("4000"),
+    "autre": Decimal("1") / Decimal("6000"),
+}
+
+# Part d'economies sur la duree (% du montant initial) pour le mode pedagogique.
+_PREVIEW_ECONOMIE_PCT: Decimal = Decimal("30")
+
+
+def simulate_preview(
+    *,
+    hypotheses: SimulationHypotheses | None = None,
+) -> SimulationResults:
+    """Calcule un SimulationResults purement base sur les hypotheses.
+
+    Mode pedagogique F51 : sans projet ni offre, on calcule un amortissement
+    lineaire sur la base des inputs utilisateur (montant, duree, type,
+    part_subvention). Aucun acces DB.
+    """
+    h = hypotheses or SimulationHypotheses()
+    montant: Money = h.montant or _PREVIEW_DEFAULT_MONTANT
+    duree_mois: int = h.duree_mois or _PREVIEW_DEFAULT_DUREE_MOIS
+    taux_pct: Decimal = h.taux_interet_pct or _PREVIEW_DEFAULT_TAUX_PCT
+    part_subv_pct: Decimal = h.part_subvention_pct or _PREVIEW_DEFAULT_PART_SUBV_PCT
+    type_inv: str = h.type_investissement or "autre"
+
+    currency = montant.currency
+    cents = Decimal("0.01")
+
+    montant_subvention_amt = (montant.amount * part_subv_pct / Decimal(100)).quantize(cents)
+    montant_emprunte_amt = (montant.amount - montant_subvention_amt).quantize(cents)
+    montant_emprunte = Money(amount=montant_emprunte_amt, currency=currency)
+
+    interets_total = interets_simples(montant_emprunte, taux_pct, duree_mois)
+
+    # Mensualite lineaire : (principal + interets) / duree.
+    total_a_rembourser = montant_emprunte_amt + interets_total.amount
+    mensualite_amt = (total_a_rembourser / Decimal(duree_mois)).quantize(cents)
+    mensualites: list[MensualiteEntry] = [
+        MensualiteEntry(
+            mois=m,
+            amount=format(mensualite_amt, "f"),
+            currency=currency,
+        )
+        for m in range(1, duree_mois + 1)
+    ]
+
+    cout_total = Money(amount=interets_total.amount, currency=currency)
+
+    economie_amt = (montant.amount * _PREVIEW_ECONOMIE_PCT / Decimal(100)).quantize(cents)
+    economie_estimee = Money(amount=economie_amt, currency=currency)
+
+    co2_factor = _PREVIEW_CO2_FACTOR_PER_EUR.get(
+        type_inv, _PREVIEW_CO2_FACTOR_PER_EUR["autre"]
+    )
+    montant_xof_or_eur: Decimal
+    if currency == Currency.EUR:
+        montant_xof_or_eur = montant.amount
+    elif currency == Currency.XOF:
+        # Convertit en EUR pour appliquer le facteur (CO2 calibre en EUR).
+        montant_xof_or_eur = (montant.amount / Decimal("655.957")).quantize(cents)
+    else:
+        montant_xof_or_eur = montant.amount  # autres devises : approximation 1:1
+    co2_evite_t = (montant_xof_or_eur * co2_factor).quantize(Decimal("0.01"))
+
+    total_finance = montant_emprunte_amt + interets_total.amount + montant_subvention_amt
+    if total_finance > 0:
+        principal_pct = float(
+            (montant_emprunte_amt / total_finance * Decimal(100)).quantize(cents)
+        )
+        interets_pct = float(
+            (interets_total.amount / total_finance * Decimal(100)).quantize(cents)
+        )
+        subvention_pct = float(
+            (montant_subvention_amt / total_finance * Decimal(100)).quantize(cents)
+        )
+    else:
+        principal_pct = interets_pct = subvention_pct = 0.0
+
+    return SimulationResults(
+        mensualites=mensualites,
+        cout_total=cout_total,
+        economie_estimee=economie_estimee,
+        co2_evite_t=format(co2_evite_t, "f"),
+        decomposition_pct=DecompositionPct(
+            principal=principal_pct,
+            interets=interets_pct,
+            subvention=subvention_pct,
+        ),
+        formula_refs=[FormulaRef(formula_id="preview.linear", version="1.0")],
+        computed_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+# ---------- F51 — Save & history ----------
+
+
+import json as _json  # noqa: E402
+
+_HISTORY_CAP = 50
+
+
+class QuotaExceededError(Exception):
+    """Cap 50 simulations actives par account."""
+
+
+class SimulationNotFound(Exception):
+    """Simulation sauvegardée introuvable."""
+
+
+def save_simulation(
+    db: Session,
+    *,
+    account_id: UUID,
+    user_id: UUID | None,
+    label: str,
+    projet_id: UUID | None,
+    offre_id: UUID | None,
+    hypotheses: dict[str, Any],
+    results: dict[str, Any],
+) -> dict[str, Any]:
+    count_row = db.execute(
+        text(
+            "SELECT COUNT(*) AS n FROM simulation_savee "
+            "WHERE account_id = CAST(:aid AS UUID) AND deleted_at IS NULL"
+        ),
+        {"aid": str(account_id)},
+    ).mappings().first()
+    if count_row and int(count_row["n"]) >= _HISTORY_CAP:
+        raise QuotaExceededError("quota_exceeded")
+
+    row = db.execute(
+        text(
+            """
+            INSERT INTO simulation_savee
+                (account_id, user_id, label, projet_id, offre_id,
+                 hypotheses_json, results_json)
+            VALUES
+                (CAST(:aid AS UUID), CAST(:uid AS UUID), :lbl,
+                 CAST(:pid AS UUID), CAST(:oid AS UUID),
+                 CAST(:hyp AS JSONB), CAST(:res AS JSONB))
+            RETURNING id, label, created_at
+            """
+        ),
+        {
+            "aid": str(account_id),
+            "uid": str(user_id) if user_id else None,
+            "lbl": label,
+            "pid": str(projet_id) if projet_id else None,
+            "oid": str(offre_id) if offre_id else None,
+            "hyp": _json.dumps(hypotheses, default=str),
+            "res": _json.dumps(results, default=str),
+        },
+    ).mappings().first()
+    assert row is not None
+
+    sim_id = row["id"]
+    try:
+        from app.audit.helper import record_audit
+        from app.audit.schemas import SourceOfChange
+
+        record_audit(
+            db,
+            entity_type="simulation_savee",
+            entity_id=sim_id,
+            field="id",
+            old=None,
+            new=str(sim_id),
+            source_of_change=SourceOfChange.MANUAL,
+            user_id=str(user_id) if user_id else None,
+            account_id=str(account_id),
+        )
+    except Exception:
+        pass
+    return {
+        "id": sim_id,
+        "label": row["label"],
+        "created_at": row["created_at"].isoformat() if row["created_at"] else "",
+    }
+
+
+def list_saved(
+    db: Session, *, account_id: UUID, limit: int = 20
+) -> list[dict[str, Any]]:
+    capped = max(1, min(50, int(limit)))
+    rows = db.execute(
+        text(
+            """
+            SELECT id, label, projet_id, offre_id, hypotheses_json,
+                   results_json, created_at
+            FROM simulation_savee
+            WHERE account_id = CAST(:aid AS UUID)
+              AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT :lim
+            """
+        ),
+        {"aid": str(account_id), "lim": capped},
+    ).mappings().all()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        results = r["results_json"] or {}
+        summary = {
+            "cout_total": results.get("cout_total") if isinstance(results, dict) else None,
+            "co2_evite_t": results.get("co2_evite_t") if isinstance(results, dict) else None,
+        }
+        out.append(
+            {
+                "id": r["id"],
+                "label": r["label"],
+                "projet_id": r["projet_id"],
+                "offre_id": r["offre_id"],
+                "hypotheses": r["hypotheses_json"] or {},
+                "results_summary": summary,
+                "created_at": r["created_at"].isoformat() if r["created_at"] else "",
+            }
+        )
+    return out
+
+
+def get_saved(
+    db: Session, *, account_id: UUID, sim_id: UUID
+) -> dict[str, Any]:
+    row = db.execute(
+        text(
+            """
+            SELECT id, label, projet_id, offre_id, hypotheses_json,
+                   results_json, created_at
+            FROM simulation_savee
+            WHERE id = CAST(:sid AS UUID)
+              AND account_id = CAST(:aid AS UUID)
+              AND deleted_at IS NULL
+            """
+        ),
+        {"sid": str(sim_id), "aid": str(account_id)},
+    ).mappings().first()
+    if row is None:
+        raise SimulationNotFound(str(sim_id))
+    return {
+        "id": row["id"],
+        "label": row["label"],
+        "projet_id": row["projet_id"],
+        "offre_id": row["offre_id"],
+        "hypotheses": row["hypotheses_json"] or {},
+        "results": row["results_json"] or {},
+        "created_at": row["created_at"].isoformat() if row["created_at"] else "",
+    }
+
+
+def soft_delete_saved(
+    db: Session, *, account_id: UUID, user_id: UUID | None, sim_id: UUID
+) -> None:
+    res = db.execute(
+        text(
+            """
+            UPDATE simulation_savee
+            SET deleted_at = now()
+            WHERE id = CAST(:sid AS UUID)
+              AND account_id = CAST(:aid AS UUID)
+              AND deleted_at IS NULL
+            """
+        ),
+        {"sid": str(sim_id), "aid": str(account_id)},
+    )
+    if res.rowcount == 0:
+        raise SimulationNotFound(str(sim_id))
+    try:
+        from app.audit.helper import record_audit
+        from app.audit.schemas import SourceOfChange
+
+        record_audit(
+            db,
+            entity_type="simulation_savee",
+            entity_id=sim_id,
+            field="deleted_at",
+            old=None,
+            new="now()",
+            source_of_change=SourceOfChange.MANUAL,
+            user_id=str(user_id) if user_id else None,
+            account_id=str(account_id),
+        )
+    except Exception:
+        pass

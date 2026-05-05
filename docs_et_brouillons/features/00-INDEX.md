@@ -226,7 +226,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **F50** Documents upload + OCR viewer UI — UI de F22 — `ready` (specs/050-documents-ocr-ui/) — _Phases 1–10 livrées (US1–US8) ; phase 11 polish : T085 (a11y axe) ✓, T086 (perf 200 docs) ✓, T087 (security review C1+H2+H4-H6 corrigés) ✓, T088 (purge_documents 93%) ✓, T089 (useFileFingerprint 100%) ✓, T090–T091 ✓, T092 quickstart manuel à dérouler._
 
 ### Phase F — Matching, candidatures, simulateur
-- **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27
+- **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27 — _Phase 7 (Polish) en cours : tests perf (T098-T099) + a11y (T100-T101) livrés ; coverage backend ciblé ≥80 % à atteindre une fois les suites US1-US4 complètes (cf. specs/051-matching-candidatures-simulateur-ui/tasks.md)._
 
 ### Phase G — Notifications & extension panneau
 - **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export

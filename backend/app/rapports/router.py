@@ -165,7 +165,7 @@ def _sse(event: str, data: dict, event_id: int) -> bytes:
     return (
         f"id: {event_id}\nevent: {event}\n"
         f"data: {json.dumps(data, separators=(',', ':'))}\n\n"
-    ).encode("utf-8")
+    ).encode()
 
 
 @router.get("/generate/{generation_id}/stream")
@@ -263,7 +263,7 @@ def _preview_secret() -> bytes:
 
 
 def _sign_preview(rapport_id: uuid.UUID, account_id: uuid.UUID, exp_ts: int) -> str:
-    msg = f"{rapport_id}|{account_id}|{exp_ts}".encode("utf-8")
+    msg = f"{rapport_id}|{account_id}|{exp_ts}".encode()
     return hmac.new(_preview_secret(), msg, hashlib.sha256).hexdigest()
 
 
