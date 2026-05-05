@@ -33,6 +33,12 @@ db-reset:
 migrate:
 	cd backend && . .venv/bin/activate && alembic upgrade head
 
+purge-documents:
+	cd backend && . .venv/bin/activate && python -m app.scripts.purge_documents
+
+purge-documents-dry-run:
+	cd backend && . .venv/bin/activate && python -m app.scripts.purge_documents --dry-run
+
 backend:
 	cd backend && . .venv/bin/activate && uvicorn app.main:app --reload --port 8010
 

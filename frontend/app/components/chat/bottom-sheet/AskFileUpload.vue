@@ -13,6 +13,7 @@ import { computed, ref } from 'vue'
 import BottomSheetShell from './BottomSheetShell.vue'
 import { useBottomSheetSubmit } from '~/composables/useBottomSheetSubmit'
 import { sanitizeText } from '~/utils/sanitize'
+import { documentEvents } from '~/lib/documentEvents'
 import type { ToolInstruction, ToolResponse } from '~/types/tools/contracts'
 
 interface Props {
@@ -112,6 +113,33 @@ async function onSubmit(): Promise<void> {
       label,
     })
     if (res.ok || res.errorCode === '409') {
+      // F50 US7 — propagation cross-onglets : la liste /documents se rafraîchit
+      // dans tous les onglets ouverts, conformément à P8.
+      try {
+        documentEvents.emit('documents:created', {
+          document: {
+            id: value.doc_id,
+            entreprise_id: '',
+            name: value.filename,
+            original_filename: value.filename,
+            mime_type: value.mime,
+            size_bytes: value.size,
+            type: 'autre',
+            ocr_status: 'pending',
+            ocr_error: null,
+            created_at: new Date().toISOString(),
+            extraction_payload: { fields: [] },
+            extraction_validated_at: null,
+            extraction_validated_by: null,
+            linked_projets: [],
+            tags: [],
+            deleted_at: null,
+            purge_scheduled_at: null,
+          },
+        })
+      } catch {
+        /* ignore : event bus optionnel */
+      }
       emit('submit', { tool: 'ask_file_upload', value, label })
       return
     }

@@ -131,7 +131,15 @@ app.include_router(credit_public_router)
 # F22 — Documents entreprise: upload / list / download / delete + OCR PDF natif.
 from app.api.routes.entreprise_documents import router as entreprise_documents_router  # noqa: E402
 
+# F50 — Extensions UI documents : fingerprint / validate / link-projet / relaunch.
+from app.api.routes.entreprise_documents_f50 import (  # noqa: E402
+    f50_router as entreprise_documents_f50_router,
+    fingerprint_router as documents_fingerprint_router,
+)
+
 app.include_router(entreprise_documents_router)
+app.include_router(documents_fingerprint_router)
+app.include_router(entreprise_documents_f50_router)
 
 # F10 — Admin support PME: read-only PME view (US1) + admin_view audit (US2).
 # Must be registered BEFORE the generic CRUD wildcard /admin/{entity}/{id}.

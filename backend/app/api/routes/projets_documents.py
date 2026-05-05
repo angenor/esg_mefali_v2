@@ -25,6 +25,7 @@ from app.projets.documents_service import (
 )
 from app.projets.validators import ValidationError as ProjetValidationError
 from app.storage.local import LocalStorage
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +48,64 @@ def list_endpoint(
         rows = list_documents(db, projet_id=projet_id, account_id=user.account_id)
     except ProjetNotFound as exc:
         raise HTTPException(status_code=404, detail={"code": "not_found"}) from exc
-    return {
-        "items": [
-            {
-                "id": str(r.id),
-                "projet_id": str(r.projet_id),
-                "name": r.name,
-                "original_filename": r.original_filename,
-                "mime_type": r.mime_type,
-                "size_bytes": r.size_bytes,
-                "type": r.type,
-                "uploaded_by": str(r.uploaded_by) if r.uploaded_by else None,
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-            }
-            for r in rows
-        ]
-    }
+
+    legacy_items = [
+        {
+            "id": str(r.id),
+            "source": "document_projet",
+            "projet_id": str(r.projet_id),
+            "name": r.name,
+            "original_filename": r.original_filename,
+            "mime_type": r.mime_type,
+            "size_bytes": r.size_bytes,
+            "type": r.type,
+            "ocr_status": "done",
+            "extraction_validated_at": None,
+            "tags": [],
+            "uploaded_by": str(r.uploaded_by) if r.uploaded_by else None,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in rows
+    ]
+
+    # F50 — Union avec document_entreprise via document_link_projet (M:N).
+    linked = db.execute(
+        text(
+            "SELECT d.id, d.name, d.original_filename, d.mime_type, d.size_bytes, "
+            "d.type, d.ocr_status, d.extraction_validated_at, d.created_at, d.uploaded_by "
+            "FROM document_entreprise d "
+            "JOIN document_link_projet l ON l.document_id = d.id "
+            "WHERE l.projet_id = CAST(:pid AS UUID) "
+            "AND l.account_id = CAST(:aid AS UUID) "
+            "AND d.deleted_at IS NULL "
+            "ORDER BY d.created_at DESC"
+        ),
+        {"pid": str(projet_id), "aid": str(user.account_id)},
+    ).all()
+    linked_items = [
+        {
+            "id": str(r.id),
+            "source": "document_entreprise",
+            "projet_id": str(projet_id),
+            "name": r.name,
+            "original_filename": r.original_filename,
+            "mime_type": r.mime_type,
+            "size_bytes": r.size_bytes,
+            "type": r.type,
+            "ocr_status": r.ocr_status,
+            "extraction_validated_at": (
+                r.extraction_validated_at.isoformat() if r.extraction_validated_at else None
+            ),
+            "tags": [],
+            "uploaded_by": str(r.uploaded_by) if r.uploaded_by else None,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+        }
+        for r in linked
+    ]
+
+    items = legacy_items + linked_items
+    items.sort(key=lambda x: x["created_at"] or "", reverse=True)
+    return {"items": items}
 
 
 @router.post("/{projet_id}/documents", status_code=201)

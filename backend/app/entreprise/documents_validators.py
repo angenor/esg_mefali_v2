@@ -20,8 +20,11 @@ ALLOWED_MIME_TYPES: frozenset[str] = frozenset({
 # Limite par fichier : 25 MB (FR-002).
 MAX_FILE_BYTES: int = 25 * 1024 * 1024
 
-# Cap par entreprise (FR-004).
-MAX_DOCS_PER_ENTREPRISE: int = 50
+# Cap par entreprise (FR-004 — élevé F50 50 → 200).
+MAX_DOCS_PER_ENTREPRISE: int = 200
+
+# Délai (jours) avant purge dure d'un document soft-deleted (F50 Q2).
+DOCUMENT_PURGE_DAYS: int = 30
 
 # Types metier autorises (FR-001).
 ALLOWED_DOC_TYPES: frozenset[str] = frozenset({

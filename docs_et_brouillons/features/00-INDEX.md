@@ -223,7 +223,7 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 
 ### Phase E — Documents, rapports, attestations
 - **F49** Rapports PDF + Page publique `/verify/{id}` — UI de F24 + F30 — `in-progress` (specs/049-rapports-attestations-ui/) — _Phases 1–7 livrées (US1–US6) ; phase 8 polish : T060/T063/T064 ✓, audits Lighthouse/a11y/no-JS et coverage finale à dérouler._
-- **F50** Documents upload + OCR viewer UI — UI de F22
+- **F50** Documents upload + OCR viewer UI — UI de F22 — `ready` (specs/050-documents-ocr-ui/) — _Phases 1–10 livrées (US1–US8) ; phase 11 polish : T085 (a11y axe) ✓, T086 (perf 200 docs) ✓, T087 (security review C1+H2+H4-H6 corrigés) ✓, T088 (purge_documents 93%) ✓, T089 (useFileFingerprint 100%) ✓, T090–T091 ✓, T092 quickstart manuel à dérouler._
 
 ### Phase F — Matching, candidatures, simulateur
 - **F51** Matching offres + Wizard candidature + Simulateur — UI de F25/F26/F27

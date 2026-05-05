@@ -29,6 +29,7 @@ from app.entreprise.documents_validators import (
 )
 from app.services.ocr_service import extract_text
 from app.storage.base import Storage
+from app.storage.fingerprint import sha256_bytes
 
 _MIME_TO_EXT = {
     "application/pdf": "pdf",
@@ -157,6 +158,9 @@ def upload_document(
     rel_path = f"entreprise/{account_id}/{entreprise_id}/{new_id}.{ext}"
     storage.save(rel_path, data)
 
+    # F50 — empreinte SHA-256 calculée serveur (jamais l'empreinte client seule).
+    sha_hex = sha256_bytes(data)
+
     # Extraction OCR synchrone (FR-010, FR-015).
     outcome = extract_text(mime_type, data)
 
@@ -167,12 +171,13 @@ def upload_document(
                 id, account_id, entreprise_id, name, original_filename, mime_type,
                 size_bytes, type, storage_path, text_content,
                 ocr_status, ocr_error, uploaded_by, source_of_change,
-                version, created_at, updated_at
+                version, content_sha256, created_at, updated_at
             )
             VALUES (
                 CAST(:id AS UUID), CAST(:aid AS UUID), CAST(:eid AS UUID),
                 :name, :ofn, :mt, :sz, :type, :sp, :txt,
-                :ostatus, :oerr, CAST(:uid AS UUID), :soc, 1, now(), now()
+                :ostatus, :oerr, CAST(:uid AS UUID), :soc, 1,
+                decode(:sha, 'hex'), now(), now()
             )
             """
         ),
@@ -195,6 +200,7 @@ def upload_document(
                 if isinstance(source_of_change, SourceOfChange)
                 else str(source_of_change)
             ),
+            "sha": sha_hex,
         },
     )
     db.flush()
@@ -295,18 +301,18 @@ def delete_document(
     source_of_change: SourceOfChange = SourceOfChange.MANUAL,
 ) -> None:
     row = get_document(db, doc_id=doc_id, account_id=account_id)
+    # F50 US6 — soft-delete avec purge_scheduled_at = deleted_at + 30 jours.
+    # Le fichier physique reste sur disque jusqu'au job de purge.
+    from app.entreprise.documents_validators import DOCUMENT_PURGE_DAYS
     db.execute(
         text(
-            "UPDATE document_entreprise SET deleted_at = now(), updated_at = now() "
-            "WHERE id = CAST(:id AS UUID)"
+            f"UPDATE document_entreprise SET deleted_at = now(), "
+            f"purge_scheduled_at = now() + interval '{DOCUMENT_PURGE_DAYS} days', "
+            f"updated_at = now() "
+            f"WHERE id = CAST(:id AS UUID)"
         ),
         {"id": str(row.id)},
     )
-    try:
-        storage.delete(row.storage_path)
-    except OSError:
-        # Soft-delete deja effectue ; on tolere un echec d'IO sur le FS.
-        pass
 
     record_audit(
         db,

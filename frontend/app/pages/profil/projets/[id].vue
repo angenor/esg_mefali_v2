@@ -12,6 +12,7 @@ import ConflictDialog from "~/components/profil/ConflictDialog.vue"
 import MoneyField from "~/components/profil/MoneyField.vue"
 import CountryMultiSelect from "~/components/profil/CountryMultiSelect.vue"
 import ProjetDocuments from "~/components/profil/ProjetDocuments.vue"
+import ProjetDocumentsGrid from "~/components/documents/ProjetDocumentsGrid.vue"
 import HistoryDrawer from "~/components/profil/HistoryDrawer.vue"
 import type { MoneyOut } from "~/stores/entreprise"
 
@@ -246,6 +247,7 @@ function formatMoney(m: MoneyOut | null | undefined): string {
       >
         <template #default>
           <ProjetDocuments :projet-id="id" />
+          <ProjetDocumentsGrid :projet-id="id" class="mt-4" />
         </template>
       </SectionCard>
     </div>
