@@ -1,0 +1,50 @@
+{"id": "g001", "text": "Le facteur ADEME est de 6.0 kg CO2/litre pour le diesel.", "expected_kinds": ["reference_keyword", "number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g002", "text": "Le seuil GCF pour les PME est de 50 M USD.", "expected_kinds": ["reference_keyword", "threshold", "number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g003", "text": "Vos émissions sont 1200 kWh par an.", "expected_kinds": ["number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g004", "text": "La consommation représente 25%.", "expected_kinds": ["percentage"], "must_be_unsourced_strict": true}
+{"id": "g005", "text": "Le délai prévu est entre 6 et 12 semaines.", "expected_kinds": ["range"], "must_be_unsourced_strict": true}
+{"id": "g006", "text": "Le BOAD finance les PME ouest-africaines.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g007", "text": "Le minimum requis est 10 000 EUR.", "expected_kinds": ["threshold", "number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g008", "text": "La proportion 2/3 des PME respecte la norme.", "expected_kinds": ["ratio"], "must_be_unsourced_strict": true}
+{"id": "g009", "text": "Le rapport 1 pour 4 est observé.", "expected_kinds": ["ratio"], "must_be_unsourced_strict": true}
+{"id": "g010", "text": "Production de 5 MW prévue.", "expected_kinds": ["number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g011", "text": "Réduction de 15 pour cent attendue.", "expected_kinds": ["percentage"], "must_be_unsourced_strict": true}
+{"id": "g012", "text": "Le taux est 4,5 %.", "expected_kinds": ["percentage"], "must_be_unsourced_strict": true}
+{"id": "g013", "text": "Selon GIEC, +1.5°C est critique.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g014", "text": "Le GHG Protocol définit le scope 1.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g015", "text": "L'AFD prête à 3 % d'intérêt.", "expected_kinds": ["reference_keyword", "percentage"], "must_be_unsourced_strict": true}
+{"id": "g016", "text": "Pour 100 000 USD investis, 8 t CO2 évitées.", "expected_kinds": ["number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g017", "text": "Calcul : emissions = consommation * 6.0.", "expected_kinds": ["formula"], "must_be_unsourced_strict": true}
+{"id": "g018", "text": "Formule appliquée: x = a + b.", "expected_kinds": ["formula"], "must_be_unsourced_strict": true}
+{"id": "g019", "text": "Le plafond fixé est 1 million EUR.", "expected_kinds": ["threshold"], "must_be_unsourced_strict": true}
+{"id": "g020", "text": "Entre 50 et 100 millions USD selon le pays.", "expected_kinds": ["range"], "must_be_unsourced_strict": true}
+{"id": "g021", "text": "En général, les PME africaines investissent peu.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g022", "text": "Cela dépend de votre situation.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g023", "text": "Typiquement, on observe ce comportement.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g024", "text": "Si vous avez plus de questions, demandez-moi.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g025", "text": "Imaginons que vous deviez choisir.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g026", "text": "À mon avis, c'est efficace.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g027", "text": "Globalement, les financements progressent.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g028", "text": "Les PME en général sont diverses.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g029", "text": "On peut considérer plusieurs options.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g030", "text": "Souvent, les démarches sont longues.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g031", "text": "Bonjour, comment ça va ?", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g032", "text": "Voici la liste de vos projets.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g033", "text": "Je peux vous aider à compléter votre dossier.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g034", "text": "Pouvez-vous préciser votre demande ?", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g035", "text": "Merci pour ces informations utiles.", "expected_kinds": [], "must_be_unsourced_strict": false}
+{"id": "g036", "text": "L'ADEME maintient la base carbone.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g037", "text": "Voici 3 projets actifs.", "expected_kinds": [], "must_be_unsourced_strict": false, "tool_outputs": ["count=3 active projets en base"]}
+{"id": "g038", "text": "Vous avez 12 kWh enregistrés.", "expected_kinds": [], "must_be_unsourced_strict": false, "tool_outputs": ["Mesure : 12 kWh stockée"]}
+{"id": "g039", "text": "Solde 5000 EUR sur le compte.", "expected_kinds": [], "must_be_unsourced_strict": false, "tool_outputs": ["solde courant 5000 EUR"]}
+{"id": "g040", "text": "Compteur 250 kg CO2 cette semaine.", "expected_kinds": [], "must_be_unsourced_strict": false, "tool_outputs": ["KPI : 250 kg CO2 mesurés"]}
+{"id": "g041", "text": "Vos 7 documents sont disponibles.", "expected_kinds": [], "must_be_unsourced_strict": false, "tool_outputs": ["doc count=7 disponible"]}
+{"id": "g042", "text": "Le taux GCF est de 50 M USD.", "expected_kinds": ["reference_keyword", "threshold", "number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g043", "text": "L'IFC investit 200 millions USD.", "expected_kinds": ["reference_keyword", "number_with_unit"], "must_be_unsourced_strict": true}
+{"id": "g044", "text": "ISO 14064 impose des règles strictes.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g045", "text": "TCFD recommande la transparence climat.", "expected_kinds": ["reference_keyword"], "must_be_unsourced_strict": true}
+{"id": "g046", "text": "Le ratio de 1 pour 5 est commun.", "expected_kinds": ["ratio"], "must_be_unsourced_strict": true}
+{"id": "g047", "text": "Limite de 100 hectares cultivés.", "expected_kinds": ["threshold"], "must_be_unsourced_strict": true}
+{"id": "g048", "text": "Réduction maximum 30%.", "expected_kinds": ["percentage", "threshold"], "must_be_unsourced_strict": true}
+{"id": "g049", "text": "De 5 à 10 ans pour amortir.", "expected_kinds": ["range"], "must_be_unsourced_strict": true}
+{"id": "g050", "text": "Le minimum reste 1000 USD investi.", "expected_kinds": ["threshold", "number_with_unit"], "must_be_unsourced_strict": true}

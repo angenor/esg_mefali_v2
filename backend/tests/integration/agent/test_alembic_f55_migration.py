@@ -65,20 +65,25 @@ def test_migration_upgrade_creates_table_and_columns(db_engine):
 
 @pytest.mark.skipif(not DB_AVAILABLE, reason="DB unavailable")
 def test_migration_reversible(db_engine):
-    """Down -1 puis up : structure identique à la fin."""
+    """Downgrade jusqu'à F54 (avant 0034 F55) puis up : structure restaurée.
+
+    Le test cible explicitement la migration 0033 (F54) comme borne basse
+    afin de rester stable même quand de nouvelles migrations (F56, F57…)
+    sont ajoutées au-dessus de F55.
+    """
     # Snapshot avant
     assert _has_table(db_engine, "tool_call_log")
 
-    # Downgrade 1
-    res = _run_alembic("downgrade", "-1")
+    # Downgrade jusqu'à 0033 (état pré-F55)
+    res = _run_alembic("downgrade", "0033_f54_alter_agent_run_prompt_hash")
     assert res.returncode == 0, res.stderr
 
-    # Vérifier disparition
+    # Vérifier disparition des artefacts F55
     assert not _has_table(db_engine, "tool_call_log")
     assert not _has_column(db_engine, "audit_log", "tool_call_id")
     assert not _has_column(db_engine, "audit_log", "agent_run_id")
 
-    # Re-apply
+    # Re-apply jusqu'à head
     res2 = _run_alembic("upgrade", "head")
     assert res2.returncode == 0, res2.stderr
     assert _has_table(db_engine, "tool_call_log")

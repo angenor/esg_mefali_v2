@@ -93,10 +93,14 @@ async def _lifespan(app_: FastAPI):
     # F16/F17). En dev, on appelle l'enregistrement explicite pour matérialiser
     # la chaîne complète.
     try:
-        from app.agent.handlers import register_mutation_handlers
+        from app.agent.handlers import (
+            register_mutation_handlers,
+            register_reinvoke_sourcing_handlers,
+        )
         from app.agent.mutation_handlers import ensure_handlers_registered
         from app.orchestrator.tools import register_response_tools
         from app.orchestrator.tools.mutations import register_mutation_tools
+        from app.orchestrator.tools.sourcing import register_sourcing_tools
 
         # Best-effort : si déjà enregistré, l'erreur de doublon est swallowée.
         try:
@@ -107,14 +111,25 @@ async def _lifespan(app_: FastAPI):
             register_mutation_tools()
         except Exception:  # noqa: BLE001
             logger.debug("[agent] register_mutation_tools already done")
+        # F56 — sourcing tools enregistrés AVANT les mutation handlers
+        try:
+            register_sourcing_tools()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_sourcing_tools already done")
         try:
             register_mutation_handlers()
         except Exception:  # noqa: BLE001
             logger.debug("[agent] register_mutation_handlers already done")
+        # F56 — sourcing READ handlers (cite_source, search_source) dans
+        # le registre legacy ``_REINVOKE_HANDLERS``.
+        try:
+            register_reinvoke_sourcing_handlers()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_reinvoke_sourcing_handlers failed")
         ensure_handlers_registered()
-        logger.info("[agent] F55 mutation handlers registered + validated")
+        logger.info("[agent] F55+F56 handlers registered + validated")
     except Exception:  # noqa: BLE001
-        logger.exception("[agent] F55 handler validation failed")
+        logger.exception("[agent] F55/F56 handler validation failed")
 
     yield
 
@@ -151,10 +166,18 @@ app.add_middleware(
     allow_headers=["*", "X-CSRF-Token"],
 )
 
+# F56 — Admin agent metrics (sourcing compliance)
+from app.admin.agent_metrics import router as admin_agent_metrics_router  # noqa: E402
+
 # Routers
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
+app.include_router(
+    admin_agent_metrics_router,
+    prefix="/admin/agent/metrics",
+    tags=["admin", "agent"],
+)
 app.include_router(sources_router)
 app.include_router(catalog_sources_router)
 app.include_router(llm_tools_router)

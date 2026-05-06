@@ -327,12 +327,34 @@ export const useChatStore = defineStore('chat', {
           break
         }
         case 'message_done': {
+          // F56 — sources agrégées (FR-011) + unsourced_claims précédemment
+          // accumulés pour cette assistantId restent attachés.
           this.updateMessage(threadId, assistantId, {
             id: frame.data.messageId || assistantId,
             content: frame.data.content ?? s.partialContent,
             payload: frame.data.payload ?? null,
             streaming: false,
+            sources: frame.data.sources ?? undefined,
           })
+          break
+        }
+        case 'unsourced_claim': {
+          // F56 — append claim non sourcé sur le message courant (rollup admin)
+          const claim = frame.data
+          const msgs = this.messagesByThread[threadId] ?? []
+          const idx = msgs.findIndex((m) => m.id === assistantId)
+          if (idx >= 0) {
+            const cur = msgs[idx]
+            const next = [...msgs]
+            next[idx] = {
+              ...cur,
+              unsourcedClaims: [...(cur.unsourcedClaims ?? []), claim],
+            }
+            this.messagesByThread = {
+              ...this.messagesByThread,
+              [threadId]: next,
+            }
+          }
           break
         }
         case 'tool_invoke': {

@@ -130,6 +130,24 @@ def _route_after_dispatch(state: AgentState) -> str:
     return N_COMPOSE
 
 
+def _route_after_compose(state: AgentState) -> str:
+    """F56 — Branchement post-compose_response (FR-008/FR-009).
+
+    - Si ``sourcing_decision == 'retry'`` ET on n'a pas encore consommé le
+      retry unique (``final_text`` reste vide après le compose) → re-appel
+      ``call_llm``. Le compteur ``sourcing_retry_count`` est plafonné à 1
+      par le ``_max_reducer``.
+    - Sinon → END.
+    """
+    if (
+        state.sourcing_decision == "retry"
+        and not state.final_text
+        and state.sourcing_retry_count <= 1
+    ):
+        return N_LLM
+    return END
+
+
 def build_graph() -> StateGraph:
     """Assemble le ``StateGraph[AgentState]`` (non compilé).
 
@@ -170,7 +188,14 @@ def build_graph() -> StateGraph:
         _route_after_dispatch,
         {N_LLM: N_LLM, N_COMPOSE: N_COMPOSE},
     )
-    g.add_edge(N_COMPOSE, END)
+    # F56 — compose_response peut demander un retry sourçage en mode strict
+    # (au plus 1 par tour ; cf. FR-009). Le routeur `_route_after_compose`
+    # ré-appelle `call_llm` si `sourcing_decision == 'retry'`, sinon END.
+    g.add_conditional_edges(
+        N_COMPOSE,
+        _route_after_compose,
+        {N_LLM: N_LLM, END: END},
+    )
 
     return g
 

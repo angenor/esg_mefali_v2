@@ -280,6 +280,17 @@ def _append(left: list[Any] | None, right: list[Any] | None) -> list[Any]:
     return base
 
 
+def _max_reducer(left: int | None, right: int | None) -> int:
+    """F56 reducer LangGraph : retourne le maximum (idempotent).
+
+    Utilisé pour ``sourcing_retry_count`` afin que les patches successifs
+    n'aboutissent jamais à une régression du compteur (FR-019).
+    """
+    a = int(left) if left is not None else 0
+    b = int(right) if right is not None else 0
+    return a if a >= b else b
+
+
 # ---------------------------------------------------------------------------
 # AgentState (FR-002)
 # ---------------------------------------------------------------------------
@@ -341,6 +352,12 @@ class AgentState(BaseModel):
     dry_run: bool = False
     pending_confirmations: dict[str, PendingConfirmation] = Field(default_factory=dict)
     agent_run_id: UUID | None = None
+
+    # F56 — Sourcing enforcement (FR-009/FR-019) -------------------------------
+    sourcing_retry_count: Annotated[int, _max_reducer] = Field(default=0, ge=0)
+    sourcing_decision: (
+        Literal["accept", "retry", "fallback", "annotate"] | None
+    ) = None
 
     # Erreurs accumulées -------------------------------------------------------
     errors: Annotated[list[AgentError], _append] = Field(default_factory=list)

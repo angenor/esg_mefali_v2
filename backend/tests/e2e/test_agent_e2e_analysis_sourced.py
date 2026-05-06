@@ -186,8 +186,17 @@ async def test_e2e_analysis_radar_chart_tool_invoke_contains_source_ids(monkeypa
 
 @pytest.mark.asyncio
 async def test_e2e_analysis_text_response_no_error(monkeypatch) -> None:
-    """E2E : flow texte simple pour analyse → done sans erreur."""
+    """E2E : flow texte simple pour analyse → done sans erreur.
+
+    Le test cible la mécanique de l'agent (graph + SSE), pas le sourçage —
+    on désactive donc temporairement le mode strict F56 en patchant la
+    config (équivalent à ``LLM_AGENT_SOURCING_MODE=off`` côté tests F53).
+    """
     account_id, user_id, thread_id = _make_account_thread()
+
+    # F56 — désactive le strict pour ce test purement F53.
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "LLM_AGENT_SOURCING_MODE", "off")
 
     fake = FakeLLM(
         responses=[
