@@ -127,7 +127,7 @@ export interface MemorySnapshot {
 
 export type StreamFrame =
   | { event: 'token'; id?: number; data: { content: string; assistantMessageId?: string } }
-  | { event: 'message_done'; id?: number; data: { messageId: string; payload?: MessagePayload | null; content: string } }
+  | { event: 'message_done'; id?: number; data: { messageId: string; payload?: MessagePayload | null; content?: string } }
   | { event: 'tool_invoke'; id?: number; data: unknown }
   | { event: 'mutation'; id?: number; data: Omit<EventBusEvent, 'source'> & { source?: EventBusSource } }
   | { event: 'error'; id?: number; data: { code: ChatErrorCode; message: string } }
@@ -137,6 +137,8 @@ export type StreamFrame =
 
 export interface SendMessageBody {
   content: string
-  context_json?: Record<string, unknown>
-  payload_json?: unknown
+  // Backend (PostMessageBody) exige context_json (extra='forbid', whitelist
+  // page/entity_type/entity_id/selection). On envoie toujours un objet.
+  context_json: Record<string, unknown>
+  payload_json?: Record<string, unknown> | null
 }

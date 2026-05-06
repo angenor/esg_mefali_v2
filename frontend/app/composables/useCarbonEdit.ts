@@ -23,7 +23,7 @@ export interface OpenDrawerArgs {
   posteCode: string
 }
 
-export interface SubmitArgs {
+export interface CarbonSubmitArgs {
   year: number
   posteCode: string
   quantity: string
@@ -36,7 +36,7 @@ export interface UseCarbonEditApi {
   isOpen: Ref<boolean>
   isSubmitting: Ref<boolean>
   openDrawer(args: OpenDrawerArgs): Promise<void>
-  submit(args: SubmitArgs): Promise<CarbonEditLineResponse | null>
+  submit(args: CarbonSubmitArgs): Promise<CarbonEditLineResponse | null>
   cancel(): Promise<void>
 }
 
@@ -104,7 +104,7 @@ export function useCarbonEdit(): UseCarbonEditApi {
     })
   }
 
-  async function submit(args: SubmitArgs): Promise<CarbonEditLineResponse | null> {
+  async function submit(args: CarbonSubmitArgs): Promise<CarbonEditLineResponse | null> {
     if (isSubmitting.value) return null
     if (!args.sourceId) {
       toast.push({

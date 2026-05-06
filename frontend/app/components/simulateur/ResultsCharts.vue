@@ -2,7 +2,7 @@
 // F51 T086 — 3 charts (bar/line/donut) du simulateur.
 import { computed } from "vue"
 import { useSimulateurStore } from "~/stores/simulateur"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 import VizLineChart from "~/components/viz/VizLineChart.vue"
 import VizDonutChart from "~/components/viz/VizDonutChart.vue"
 

@@ -2,7 +2,7 @@
 // F51 T031 — Card d'une offre dans la liste /matching.
 
 import { computed } from "vue"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 import type { OffreMatchItem } from "~/types/matching"
 
 const props = defineProps<{

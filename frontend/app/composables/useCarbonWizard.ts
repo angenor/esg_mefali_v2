@@ -20,10 +20,10 @@ import type {
   WizardDraft,
 } from "~/types/carbon"
 
-export type WizardStepKey = "energy" | "mobility" | "purchases"
+export type CarbonWizardStepKey = "energy" | "mobility" | "purchases"
 export type WizardStepNumber = 1 | 2 | 3
 
-const STEP_KEYS: WizardStepKey[] = ["energy", "mobility", "purchases"]
+const STEP_KEYS: CarbonWizardStepKey[] = ["energy", "mobility", "purchases"]
 
 const SCHEMAS = {
   energy: z.object({
@@ -43,7 +43,7 @@ const SCHEMAS = {
   }),
 } as const
 
-const POSTE_BY_STEP: Record<WizardStepKey, string> = {
+const POSTE_BY_STEP: Record<CarbonWizardStepKey, string> = {
   energy: "electricite",
   mobility: "deplacements",
   purchases: "achats",
@@ -52,10 +52,10 @@ const POSTE_BY_STEP: Record<WizardStepKey, string> = {
 export interface UseCarbonWizardApi {
   draft: ComputedRef<WizardDraft | null>
   step: ComputedRef<WizardStepNumber>
-  stepKey: ComputedRef<WizardStepKey>
+  stepKey: ComputedRef<CarbonWizardStepKey>
   isSubmitting: Ref<boolean>
   start(year: number, accountId?: string | null): void
-  setAnswer<K extends WizardStepKey>(
+  setAnswer<K extends CarbonWizardStepKey>(
     stepKey: K,
     payload: NonNullable<WizardAnswers[K]>,
   ): void
@@ -79,7 +79,7 @@ export function useCarbonWizard(): UseCarbonWizardApi {
   const step = computed<WizardStepNumber>(
     () => (store.wizardDraft?.step ?? 1) as WizardStepNumber,
   )
-  const stepKey = computed<WizardStepKey>(
+  const stepKey = computed<CarbonWizardStepKey>(
     () => STEP_KEYS[step.value - 1] ?? "energy",
   )
 
@@ -100,7 +100,7 @@ export function useCarbonWizard(): UseCarbonWizardApi {
     persist(accountId, next)
   }
 
-  function setAnswer<K extends WizardStepKey>(
+  function setAnswer<K extends CarbonWizardStepKey>(
     key: K,
     payload: NonNullable<WizardAnswers[K]>,
   ): void {

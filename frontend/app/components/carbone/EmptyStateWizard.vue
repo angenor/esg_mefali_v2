@@ -11,7 +11,7 @@ import UiNumber from "~/components/ui/UiNumber.vue"
 import UiInput from "~/components/ui/UiInput.vue"
 import UiSelect from "~/components/ui/UiSelect.vue"
 import UiProgress from "~/components/ui/UiProgress.vue"
-import { useCarbonWizard, type WizardStepKey } from "~/composables/useCarbonWizard"
+import { useCarbonWizard, type CarbonWizardStepKey } from "~/composables/useCarbonWizard"
 import { useT } from "~/composables/useT"
 
 interface Props {
@@ -30,7 +30,7 @@ onMounted(() => {
 const isStarted = computed(() => wizard.draft.value !== null)
 
 const STEP_DEFS: Array<{
-  key: WizardStepKey
+  key: CarbonWizardStepKey
   units: string[]
   iconLabel: string
 }> = [
@@ -39,11 +39,11 @@ const STEP_DEFS: Array<{
   { key: "purchases", units: ["EUR", "FCFA"], iconLabel: "🛒" },
 ]
 
-function stepLabel(key: WizardStepKey): string {
+function stepLabel(key: CarbonWizardStepKey): string {
   return t(`carbon.wizard.steps.${key}`)
 }
 
-function unitOptions(key: WizardStepKey) {
+function unitOptions(key: CarbonWizardStepKey) {
   const def = STEP_DEFS.find((d) => d.key === key)!
   return def.units.map((u) => ({ value: u, label: u }))
 }
@@ -52,13 +52,13 @@ function start(): void {
   wizard.start(props.year, null)
 }
 
-function answer(key: WizardStepKey) {
+function answer(key: CarbonWizardStepKey) {
   const draft = wizard.draft.value
   return draft?.answers[key] ?? { quantity: "", unit: STEP_DEFS.find((d) => d.key === key)!.units[0]!, source_id: "" }
 }
 
 function update(
-  key: WizardStepKey,
+  key: CarbonWizardStepKey,
   field: "quantity" | "unit" | "source_id",
   value: string,
 ): void {
@@ -81,7 +81,7 @@ async function freeText(): Promise<void> {
   await wizard.freeText()
 }
 
-const currentKey = computed<WizardStepKey>(() => wizard.stepKey.value)
+const currentKey = computed<CarbonWizardStepKey>(() => wizard.stepKey.value)
 const progress = computed(() => Math.round((wizard.step.value / 3) * 100))
 </script>
 

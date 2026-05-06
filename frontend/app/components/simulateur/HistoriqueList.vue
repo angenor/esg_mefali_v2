@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // F51 T088 — Liste des simulations sauvegardées.
 import { useSimulateurStore } from "~/stores/simulateur"
-import { formatMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 
 const store = useSimulateurStore()
 

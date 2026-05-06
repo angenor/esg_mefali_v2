@@ -1,7 +1,8 @@
 // F51 T010 — Tests formatMoney + convertMoney.
 
 import { describe, it, expect } from "vitest"
-import { convertMoney, formatMoney } from "~/utils/money"
+import { convertMoney } from "~/utils/money"
+import { formatMoney } from "~/utils/moneyFormat"
 
 describe("formatMoney", () => {
   it("formats EUR with 2 decimals (fr-FR)", () => {
@@ -17,8 +18,8 @@ describe("formatMoney", () => {
     expect(out).toContain("F") // F CFA
   })
 
-  it("returns empty string on invalid amount", () => {
-    expect(formatMoney({ amount: "not-a-number", currency: "EUR" })).toBe("")
+  it("returns placeholder '--' on invalid amount", () => {
+    expect(formatMoney({ amount: "not-a-number", currency: "EUR" })).toBe("--")
   })
 })
 
