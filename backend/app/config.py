@@ -119,6 +119,26 @@ class Settings(BaseSettings):
         "development"
     )
 
+    # --- F57 (Agent Memory & Long-term Recall, FR-013) ---
+    # Top-K messages anciens retenus par cosine search (US1).
+    LLM_AGENT_MEMORY_TOP_K: int = Field(default=3, ge=1, le=10)
+    # Seuil de similarité cosine en dessous duquel un message est ignoré (US1).
+    LLM_AGENT_MEMORY_THRESHOLD: float = Field(default=0.7, ge=0.0, le=1.0)
+    # Nombre de messages chronologiques chargés systématiquement (court terme).
+    LLM_AGENT_MEMORY_RECENT_COUNT: int = Field(default=15, ge=1, le=200)
+    # Seuil de messages à partir duquel la compaction async s'enclenche (US6).
+    LLM_AGENT_COMPACT_THRESHOLD: int = Field(default=100, ge=10, le=10000)
+    # Taille du chunk fixe compacté à chaque trigger.
+    LLM_AGENT_COMPACT_BATCH_SIZE: int = Field(default=50, ge=10, le=1000)
+    # Budget tokens max du résumé compaction généré par le LLM.
+    LLM_AGENT_COMPACT_MAX_TOKENS: int = Field(default=500, ge=64, le=4000)
+    # Budget tokens du summary stocké dans agent_entity_memory (US7).
+    LLM_AGENT_ENTITY_MEMORY_MAX_TOKENS: int = Field(default=800, ge=64, le=4000)
+    # Budget tokens (sérialisation ToolMessage) pour le résultat recall_history.
+    LLM_AGENT_RECALL_HISTORY_MAX_TOKENS: int = Field(default=800, ge=64, le=4000)
+    # Rétention applicative des lignes recall_log (job ops post-MVP).
+    LLM_AGENT_RECALL_LOG_RETENTION_DAYS: int = Field(default=90, ge=1, le=3650)
+
     @model_validator(mode="after")
     def _enforce_sourcing_mode_in_prod(self) -> Settings:
         """FR-007 — fail-fast au boot si ``mode='off'`` en production."""
@@ -126,6 +146,17 @@ class Settings(BaseSettings):
             raise ValueError(
                 "LLM_AGENT_SOURCING_MODE='off' is forbidden when "
                 "ENVIRONMENT='production' (constitutional invariant P1)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _check_memory_compact_consistency(self) -> Settings:
+        """F57 / FR-013 — fail-fast si les seuils de compaction sont
+        incohérents (batch > threshold)."""
+        if self.LLM_AGENT_COMPACT_BATCH_SIZE > self.LLM_AGENT_COMPACT_THRESHOLD:
+            raise ValueError(
+                "LLM_AGENT_COMPACT_BATCH_SIZE must be <= "
+                "LLM_AGENT_COMPACT_THRESHOLD (F57)"
             )
         return self
 

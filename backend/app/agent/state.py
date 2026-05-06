@@ -359,6 +359,17 @@ class AgentState(BaseModel):
         Literal["accept", "retry", "fallback", "annotate"] | None
     ) = None
 
+    # F57 — Memory & long-term recall (FR-011, FR-012) -------------------------
+    # Cache transient embedding par tour : key = f"{thread_id}:{sha256(query)}".
+    # Garbage-collected à la fin du tour (exclu du checkpointer).
+    embedding_cache: dict[str, list[float]] = Field(
+        default_factory=dict, exclude=True
+    )
+    # Lignes recall_log accumulées au fil du tour, flush en DB à la fin.
+    recall_log_entries: Annotated[list[dict[str, Any]], _append] = Field(
+        default_factory=list, exclude=True
+    )
+
     # Erreurs accumulées -------------------------------------------------------
     errors: Annotated[list[AgentError], _append] = Field(default_factory=list)
 

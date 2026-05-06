@@ -201,6 +201,10 @@ async def run_agent(
                 # Reconstruire un AgentState à partir du dict final
                 final_state = _coerce_to_state(final_state_dict, fallback=initial_state)
 
+                # 6.b — F57 / US9 : flush des recall_log entries staged
+                # par les nodes/handlers (auto + tool) en 1 seul commit.
+                _flush_recall_log_entries(final_state)
+
                 # 7. Émettre les events
                 async for line in _emit_events(final_state, run_id=run_id):
                     yield line
@@ -427,6 +431,41 @@ def _persist_assistant(
         # La persistance ne MUST pas casser le SSE — on log silencieusement.
         # Cas dev : le thread chat peut ne pas exister (test isolé).
         logger.debug("persist_assistant skipped: thread chat introuvable ou err")
+
+
+def _flush_recall_log_entries(state: AgentState) -> None:
+    """F57 / US9 — Flush en DB les entries recall_log accumulées (auto + tool).
+
+    Best-effort : aucune exception ne propage (le tour ne doit pas casser
+    pour un tracing).
+    """
+    entries = list(getattr(state, "recall_log_entries", None) or [])
+    if not entries:
+        return
+    try:
+        from app.agent.memory.recall_log import flush_entries
+    except Exception:  # pragma: no cover
+        return
+    try:
+        with SessionLocal() as session:
+            try:
+                session.execute(
+                    text(
+                        f"SET LOCAL app.current_account_id = '{state.account_id}'"
+                    )
+                )
+                if state.user_id:
+                    session.execute(
+                        text(
+                            f"SET LOCAL app.current_user_id = '{state.user_id}'"
+                        )
+                    )
+            except Exception:  # pragma: no cover
+                pass
+            flush_entries(session, entries)
+            session.commit()
+    except Exception:  # noqa: BLE001
+        logger.debug("recall_log flush skipped (best-effort)")
 
 
 __all__ = [
