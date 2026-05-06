@@ -42,6 +42,10 @@ class TraceContext:
     total_tokens_in: int = 0
     total_tokens_out: int = 0
     total_tool_calls: int = 0
+    # F58 / US6 — inférence ``flow`` pour sous-quotas. Setté en début de run
+    # par le runner (cf. ``run_agent``) à partir de ``state.context_json`` /
+    # skill active. Défaut conservateur ``conversation``.
+    flow: str = "conversation"
 
 
 def _should_write_db(mode: str) -> bool:
@@ -101,6 +105,7 @@ async def traced_node(
                     tool_calls_count=tool_calls_count,
                     status=status,
                     error=error,
+                    flow=ctx.flow,
                 )
             except Exception:  # pragma: no cover - tracing must never break
                 logger.exception("Failed to write agent_run_step")

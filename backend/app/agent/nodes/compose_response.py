@@ -24,6 +24,7 @@ from typing import Any
 
 from langchain_core.messages import SystemMessage
 
+from app.agent.guardrails.lang_check import detect_language, needs_french_retry
 from app.agent.sourcing.models import SourcingValidationResult
 from app.agent.sourcing.validator import (
     aggregate_sources_from_calls,
@@ -41,9 +42,33 @@ _FALLBACK_VALIDATION = (
     "ta demande différemment ?"
 )
 
+_FALLBACK_LOOP = (
+    "Boucle détectée, opération annulée — peux-tu reformuler ta demande "
+    "ou la décomposer en étapes plus simples ?"
+)
+
 _FALLBACK_SOURCING = (
     "Je ne dispose pas de source vérifiée pour cette information."
 )
+
+_FALLBACK_LANG_FR = (
+    "Je rencontre une difficulté à formuler ma réponse en français. "
+    "Peux-tu reformuler ta demande ?"
+)
+
+
+def _build_lang_retry_system_message() -> SystemMessage:
+    """F58 / US3 — message système forçant la prochaine génération en FR."""
+    return SystemMessage(
+        content=(
+            "Note système (politique de langue) : la réponse précédente "
+            "n'était pas en français, alors que la préférence utilisateur "
+            "est `fr`. Tu DOIS répondre **en français** uniquement. Pas "
+            "d'anglais, d'espagnol ou d'arabe en sortie texte (les "
+            "terminologies techniques anglaises courantes — API, ESG, KPI "
+            "— restent autorisées). Réponds à nouveau."
+        ),
+    )
 
 
 def _has_unrecoverable_validation_error(state: AgentState) -> bool:
@@ -115,6 +140,17 @@ async def node_compose_response(state: AgentState) -> dict:
        d. annotate  → garde le texte (auto unsourced_flag).
     3. dispatch sans texte LLM → vide.
     """
+    # F58 / US7 — Loop détectée par validate_payload : on stoppe avec un
+    # message poli FR (l'erreur est non retriable, le LLM ne peut pas s'en
+    # sortir tout seul). Ce check passe AVANT la validation générique car
+    # on veut un message dédié plus clair que le fallback validation.
+    if any(e.code == "loop_detected" for e in state.errors):
+        return {
+            "final_text": _FALLBACK_LOOP,
+            "sourcing_decision": "accept",
+            "loop_detected": True,
+        }
+
     if _has_unrecoverable_validation_error(state):
         return {"final_text": _FALLBACK_VALIDATION, "sourcing_decision": "accept"}
 
@@ -172,6 +208,15 @@ async def node_compose_response(state: AgentState) -> dict:
     }
 
     if result.decision == "accept":
+        # F58 / US3 — Avant de finaliser, on vérifie la langue de la réponse.
+        # Si l'utilisateur préfère le français mais le LLM a dérivé vers
+        # en/es/ar, on relance UNE FOIS avec une consigne FR. Sinon on
+        # garde la réponse telle quelle. La détection est tolérante aux
+        # textes courts et au mélange terminologique technique.
+        lang_patch = _maybe_request_french_retry(state, text)
+        if lang_patch is not None:
+            return lang_patch
+
         patch["final_text"] = text
         # Aggreger les sources (best-effort — metadata sera enrichi par le runner)
         sources = aggregate_sources_from_calls(list(state.validated_calls))
@@ -199,6 +244,69 @@ async def node_compose_response(state: AgentState) -> dict:
     # decision == "annotate" (mode permissive)
     patch["final_text"] = text
     return patch
+
+
+def _maybe_request_french_retry(state: AgentState, text: str) -> dict | None:
+    """F58 / US3 — décide si un retry FR doit être déclenché.
+
+    Retourne un patch state à appliquer si retry, sinon None.
+
+    Politique :
+    - locale utilisateur ≠ 'fr' → pas de politique FR.
+    - texte court (< 30 chars utiles) → ``unknown``, pas de retry (tolérance
+      faux positifs).
+    - retry déjà consommé (``lang_retry_count >= 1``) → fallback texte FR si
+      la réponse reste non-FR ; on log mais on ne ré-essaie pas.
+    """
+    user_lang = state.context_json.locale
+    if user_lang != "fr":
+        return None
+
+    detected = detect_language(text)
+    if not needs_french_retry(detected, user_lang_pref=user_lang, offer_accepted_langs=None):
+        return None
+
+    if state.lang_retry_count >= 1:
+        # Retry déjà consommé : on substitue par un fallback FR poli plutôt
+        # que d'envoyer du texte non-FR à l'utilisateur (FR-006 strict).
+        try:
+            logger.warning(
+                "lang_retry_exhausted",
+                extra={
+                    "agent_run_id": str(state.agent_run_id) if state.agent_run_id else None,
+                    "detected_lang": detected,
+                },
+            )
+        except Exception:  # pragma: no cover
+            pass
+        return {
+            "final_text": _FALLBACK_LANG_FR,
+            "language_corrected": True,
+            "sourcing_decision": "fallback",
+        }
+
+    # 1er retry : on appose un SystemMessage et on rebascule vers call_llm.
+    try:
+        logger.info(
+            "lang_retry_triggered",
+            extra={
+                "agent_run_id": str(state.agent_run_id) if state.agent_run_id else None,
+                "detected_lang": detected,
+            },
+        )
+    except Exception:  # pragma: no cover
+        pass
+    return {
+        "messages": [_build_lang_retry_system_message()],
+        "lang_retry_count": state.lang_retry_count + 1,
+        "language_corrected": True,
+        # final_text vide ⇒ le router doit rebascule vers call_llm. On
+        # réutilise le mécanisme existant de sourcing retry en posant
+        # ``sourcing_decision='retry'`` (le router compose_response déjà
+        # configuré l'interprète comme « relance LLM »).
+        "sourcing_decision": "retry",
+        "final_text": "",
+    }
 
 
 __all__ = ["NODE_NAME", "node_compose_response"]

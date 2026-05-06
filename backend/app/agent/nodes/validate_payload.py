@@ -1,6 +1,9 @@
 """F53 / T034 — Nœud ``validate_payload`` : Pydantic strict + retry.
 
 Pour chaque ``ToolCall`` brut :
+- F58 / US7 — détecte une boucle (3x mêmes args / > 10 calls par tour) AVANT
+  de valider, pour éviter de payer le coût de validation+dispatch d'un appel
+  redondant et stoppe proprement le tour avec ``loop_detected = True`` ;
 - valide les ``arguments`` contre le schéma Pydantic du tool (extra='forbid') ;
 - si OK : crée un ``ValidatedToolCall`` ;
 - si KO : ajoute un ``ToolMessage`` d'erreur structurée à ``state.messages``
@@ -17,6 +20,7 @@ from typing import Any
 
 from langchain_core.messages import ToolMessage
 
+from app.agent.guardrails.loop_detector import detect_loop
 from app.agent.state import AgentError, AgentState, ValidatedToolCall
 from app.config import get_settings
 from app.orchestrator.payload_validator import format_for_llm, validate
@@ -54,6 +58,38 @@ async def node_validate_payload(state: AgentState) -> dict:
 
     if not pending:
         return {}
+
+    # F58 / US7 — Détection de boucle préalable. On parcourt les pending dans
+    # l'ordre d'arrivée et on vérifie la séquence ``validated_calls + déjà
+    # vus ce batch`` contre chaque nouveau call. Au 1er trigger, on flag
+    # ``loop_detected=True``, on émet un AgentError non retriable et on
+    # retourne immédiatement — le router compose_response prendra le
+    # relais avec un message poli.
+    history_for_loop: list[Any] = [
+        {"name": v.name, "arguments": v.arguments.model_dump(mode="python")}
+        for v in state.validated_calls
+    ]
+    for tc in pending:
+        candidate = {"name": tc.name, "arguments": dict(tc.arguments)}
+        loop = detect_loop(history_for_loop, candidate)
+        if loop.triggered:
+            return {
+                "loop_detected": True,
+                "errors": [
+                    AgentError(
+                        node_name=NODE_NAME,
+                        code="loop_detected",
+                        message=f"Boucle détectée ({loop.reason}) sur {loop.last_tool_name}",
+                        retriable=False,
+                        details={
+                            "tool_name": loop.last_tool_name,
+                            "reason": loop.reason,
+                            "last_args_hash": loop.last_args_hash,
+                        },
+                    )
+                ],
+            }
+        history_for_loop.append(candidate)
 
     new_validated: list[ValidatedToolCall] = []
     new_messages: list[ToolMessage] = []
