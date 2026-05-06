@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import text
-
 from tests.integration.conftest import requires_db
 
 

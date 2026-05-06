@@ -63,3 +63,38 @@ def pytest_configure(config):
     # Désactive complètement le chargement du fichier .env pour les tests
     # qui patchent l'env (sinon pydantic-settings recharge depuis disque).
     os.environ.setdefault("PYTEST_RUNNING", "1")
+    # F53 — register tools side-effect early to avoid test pollution between
+    # tests that depend on TOOL_REGISTRY (skills validation utilise
+    # ``respond_user`` qui n'est PAS dans le registre F14, donc on AJOUTE
+    # ``respond_user`` au registre côté tests pour rester compat).
+    try:
+        from pydantic import BaseModel, ConfigDict
+
+        from app.orchestrator.tool_registry import TOOL_REGISTRY, tool
+
+        if "respond_user" not in TOOL_REGISTRY:
+            class _RespondUserPayload(BaseModel):
+                model_config = ConfigDict(extra="forbid")
+                text: str = ""
+
+            tool(
+                name="respond_user",
+                description="Réponse texte simple",
+                use_when="Aucun tool structuré n'est nécessaire",
+                dont_use_when="Une mutation/visu est attendue",
+                schema=_RespondUserPayload,
+            )
+    except Exception:  # noqa: BLE001 - never break tests collection
+        pass
+
+
+# ---------------------------------------------------------------------------
+# F53 — Agent fixtures (importées depuis tests.agent_fixtures)
+# ---------------------------------------------------------------------------
+# pytest les détecte via la ré-exportation explicite ci-dessous.
+from tests.agent_fixtures import (  # noqa: E402, F401  -- pytest collecte
+    FakeLLM,
+    fake_llm_factory,
+    make_text_response,
+    make_tool_call_response,
+)

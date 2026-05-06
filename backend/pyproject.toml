@@ -22,6 +22,7 @@ markers = [
     "integration: tests requérant Postgres up (skip si DB indispo)",
     "unit: tests unitaires rapides (peuvent toucher la DB pour smoke)",
     "perf: tests de performance (smoke p95)",
+    "e2e: tests E2E bout-en-bout (exécutés par e2e-runner)",
 ]
 
 [tool.coverage.run]

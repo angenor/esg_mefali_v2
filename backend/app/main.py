@@ -24,6 +24,7 @@ from app.admin.publish import router as admin_publish_router
 from app.admin.router import router as admin_router
 from app.admin.search import router as admin_search_router
 from app.admin.stats import router as admin_stats_router
+from app.agent.api import router as agent_health_router
 from app.api.routes.admin_llm_eval import router as admin_llm_eval_router
 from app.api.routes.admin_unsourced import router as admin_unsourced_router
 from app.api.routes.audit_log import router as audit_log_router
@@ -37,6 +38,7 @@ from app.auth.router import router as auth_router
 from app.catalog.sources.router import router as catalog_sources_router
 from app.chat.api import events_router as chat_events_router
 from app.chat.api import router as chat_router
+from app.config import get_settings
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
 from app.middleware.request_id import RequestIdMiddleware
@@ -44,7 +46,50 @@ from app.users.router import router as users_router
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ESG Mefali API", version="0.2.0")
+from contextlib import asynccontextmanager  # noqa: E402
+
+
+@asynccontextmanager
+async def _lifespan(app_: FastAPI):
+    """Lifespan FastAPI : compile graph + setup checkpointer (F53)."""
+    import time as _time
+
+    settings = get_settings()
+    if settings.LLM_AGENT_MODE != "langgraph":
+        logger.info("[agent] F53 mode=raw — agent désactivé, fallback proxy LLM")
+        app_.state.agent_graph = None
+        app_.state.agent_checkpointer = None
+        yield
+        return
+
+    start = _time.perf_counter()
+    try:
+        from app.agent.checkpointer import get_or_setup_async_saver
+        from app.agent.graph import compile_graph
+
+        logger.info("[agent] compiling graph...")
+        try:
+            saver = await get_or_setup_async_saver(settings.database_url)
+            app_.state.agent_checkpointer = saver
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "[agent] postgres checkpointer setup failed (continue without)"
+            )
+            app_.state.agent_checkpointer = None
+
+        graph = compile_graph(checkpointer=app_.state.agent_checkpointer)
+        app_.state.agent_graph = graph
+        boot_ms = int((_time.perf_counter() - start) * 1000)
+        app_.state.agent_boot_duration_ms = boot_ms
+        logger.info("[agent] graph compiled in %d ms, ready.", boot_ms)
+    except Exception:  # noqa: BLE001
+        logger.exception("[agent] graph compilation failed")
+        app_.state.agent_graph = None
+        app_.state.agent_checkpointer = None
+    yield
+
+
+app = FastAPI(title="ESG Mefali API", version="0.2.0", lifespan=_lifespan)
 
 # Rate limiting (slowapi)
 app.state.limiter = limiter
@@ -230,6 +275,8 @@ from app.extension.admin_router import (  # noqa: E402
 )
 from app.extension.router import (  # noqa: E402
     me_extension_router as f52_me_extension_router,
+)
+from app.extension.router import (
     router as extension_router,
 )
 
@@ -243,6 +290,8 @@ from app.candidatures.router import (  # noqa: E402
 )
 from app.notifications.router import (  # noqa: E402
     preferences_router as f52_notification_preferences_router,
+)
+from app.notifications.router import (
     router as f34_notifications_router,
 )
 from app.notifications.stream import (  # noqa: E402
@@ -255,6 +304,9 @@ app.include_router(f34_notifications_router)
 app.include_router(f52_notification_preferences_router)
 app.include_router(f38_notifications_stream_router)
 app.include_router(f52_users_router)
+
+# F53 — Agent LangGraph healthcheck
+app.include_router(agent_health_router)
 
 
 @app.get("/health")

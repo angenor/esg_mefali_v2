@@ -1,0 +1,99 @@
+openapi: 3.1.0
+info:
+  title: ESG Mefali — Agent healthcheck
+  version: 1.0.0
+  description: |
+    Endpoint de santé spécifique à l'agent LangGraph (F53). Indique si le graph
+    est compilé, si le checkpointer Postgres est joignable, et si le LLM est
+    atteignable. Permet aux probes Kubernetes/k3s d'arrêter le routage du
+    trafic vers une instance dont l'agent est dégradé.
+
+paths:
+  /health/agent:
+    get:
+      operationId: getAgentHealth
+      summary: Health check de l'agent ESG Mefali
+      tags: [health]
+      security: []   # Public endpoint (kube probes)
+      responses:
+        '200':
+          description: Agent en bonne santé (tous les checks verts)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentHealthResponse'
+              examples:
+                healthy:
+                  value:
+                    ok: true
+                    langgraph_compiled: true
+                    postgres_checkpointer: true
+                    llm_reachable: true
+                    mode: "langgraph"
+                    boot_duration_ms: 1842
+        '503':
+          description: |
+            Au moins un check est rouge. Le payload contient le détail.
+            Kubernetes considérera l'instance comme non prête.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentHealthResponse'
+              examples:
+                degraded_llm:
+                  value:
+                    ok: false
+                    langgraph_compiled: true
+                    postgres_checkpointer: true
+                    llm_reachable: false
+                    mode: "langgraph"
+                    error: "Connection timeout to LLM endpoint"
+
+components:
+  schemas:
+    AgentHealthResponse:
+      type: object
+      required:
+        - ok
+        - langgraph_compiled
+        - postgres_checkpointer
+        - llm_reachable
+        - mode
+      properties:
+        ok:
+          type: boolean
+          description: |
+            True si tous les checks individuels sont verts.
+        langgraph_compiled:
+          type: boolean
+          description: |
+            True si `compile_agent_graph()` a réussi au boot. False = backend
+            DOIT refuser de servir des requêtes (fail-fast au boot, mais cas
+            edge possible si compile recompilé en runtime).
+        postgres_checkpointer:
+          type: boolean
+          description: |
+            True si le `PostgresSaver.setup()` est validé et les tables
+            `checkpoints*` sont accessibles.
+        llm_reachable:
+          type: boolean
+          description: |
+            True si un ping HEAD vers `LLM_BASE_URL` retourne 200/204 dans
+            un budget de 1s. False = OpenRouter (ou équivalent) injoignable.
+        mode:
+          type: string
+          enum: [langgraph, raw]
+          description: |
+            Mode actif (cf. `LLM_AGENT_MODE` env). En mode `raw`, les autres
+            champs (`langgraph_compiled`, etc.) restent informatifs mais ne
+            sont pas critiques.
+        boot_duration_ms:
+          type: integer
+          description: |
+            Durée de boot complet (compile + setup) en ms. Indicatif pour
+            détecter les dégradations progressives.
+        error:
+          type: string
+          nullable: true
+          description: |
+            Si ok=false, message d'erreur synthétique. Pas de stack trace.

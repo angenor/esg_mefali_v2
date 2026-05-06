@@ -27,6 +27,7 @@ from app.chat.schemas import (
     PostMessageBody,
 )
 from app.chat.service import ThreadArchivedError, ThreadNotFoundError
+from app.config import get_settings
 from app.db import get_db
 from app.models.account_user import AccountUser
 
@@ -152,6 +153,41 @@ def post_message(
         finally:
             db2.close()
 
+    settings = get_settings()
+    use_agent = settings.LLM_AGENT_MODE == "langgraph"
+
+    if use_agent:
+        # F53 — Agent LangGraph
+        from app.agent.runner import (
+            ThreadAccessDenied,
+            make_thread_id,
+            run_agent,
+        )
+
+        composite_thread_id = make_thread_id(account_id, conv_id=thread_id)
+        ctx_payload = body.context_json or {"page_route": "/chat"}
+
+        async def gen_agent():
+            try:
+                async for sse_line in run_agent(
+                    account_id=account_id,
+                    user_id=user_id,
+                    thread_id=composite_thread_id,
+                    user_message=user_content,
+                    context_json=ctx_payload,
+                ):
+                    yield sse_line
+            except ThreadAccessDenied:
+                err = {"code": "not_found", "detail": "thread_not_found"}
+                yield f"event: error\ndata: {json.dumps(err)}\n\n"
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("agent post_message stream error: %s", exc)
+                err = {"code": "stream_error", "detail": str(exc)[:200]}
+                yield f"event: error\ndata: {json.dumps(err)}\n\n"
+
+        return StreamingResponse(gen_agent(), media_type="text/event-stream")
+
+    # Mode raw — proxy LLM brut (F13)
     async def gen():
         last_content = ""
         try:
