@@ -38,6 +38,7 @@ from app.auth.router import router as auth_router
 from app.catalog.sources.router import router as catalog_sources_router
 from app.chat.api import events_router as chat_events_router
 from app.chat.api import router as chat_router
+from app.chat.memory.api import router as chat_memory_router
 from app.config import get_settings
 from app.core.rate_limit import limiter
 from app.middleware.auth_session import AuthSessionMiddleware
@@ -95,6 +96,7 @@ async def _lifespan(app_: FastAPI):
     try:
         from app.agent.handlers import (
             register_mutation_handlers,
+            register_reinvoke_memory_handlers,
             register_reinvoke_sourcing_handlers,
         )
         from app.agent.mutation_handlers import ensure_handlers_registered
@@ -126,10 +128,23 @@ async def _lifespan(app_: FastAPI):
             register_reinvoke_sourcing_handlers()
         except Exception:  # noqa: BLE001
             logger.debug("[agent] register_reinvoke_sourcing_handlers failed")
+        # F57 — memory READ handler (recall_history) dans
+        # ``_REINVOKE_HANDLERS``. Hook post-mutation entity_memory
+        # enregistré séparément ci-dessous.
+        try:
+            register_reinvoke_memory_handlers()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_reinvoke_memory_handlers failed")
+        try:
+            from app.agent.memory import install_post_mutation_hook
+
+            install_post_mutation_hook()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] install_post_mutation_hook failed")
         ensure_handlers_registered()
-        logger.info("[agent] F55+F56 handlers registered + validated")
+        logger.info("[agent] F55+F56+F57 handlers registered + validated")
     except Exception:  # noqa: BLE001
-        logger.exception("[agent] F55/F56 handler validation failed")
+        logger.exception("[agent] F55/F56/F57 handler validation failed")
 
     yield
 
@@ -191,6 +206,7 @@ app.include_router(entreprise_router)
 app.include_router(entreprise_router)
 app.include_router(chat_router)
 app.include_router(chat_events_router)
+app.include_router(chat_memory_router)
 
 # F12 — Profile projets: CRUD + duplicate + transition + documents
 from app.api.routes.projets import router as projets_router  # noqa: E402

@@ -56,7 +56,18 @@ def register_reinvoke_sourcing_handlers() -> None:
     _REINVOKE_HANDLERS.setdefault("search_source", search_source_handler)
 
 
+def register_reinvoke_memory_handlers() -> None:
+    """F57 — Enregistre le handler READ ``recall_history``.
+
+    Idempotent : ré-import safe (utilise ``setdefault``).
+    """
+    from app.agent.handlers import recall_history as _recall_history_module
+
+    _recall_history_module.register()
+
+
 __all__ = [
     "register_mutation_handlers",
+    "register_reinvoke_memory_handlers",
     "register_reinvoke_sourcing_handlers",
 ]
