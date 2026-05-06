@@ -12,13 +12,14 @@ qui matche le format composite ``{account_uuid}:{conv_uuid}`` (cf. Q2 clarif).
 from __future__ import annotations
 
 import re
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Types simples + helpers thread_id
@@ -91,6 +92,31 @@ class DispatchCategory(StrEnum):
     REINVOKE_LLM = "reinvoke_llm"
 
 
+class ToolCategory(StrEnum):
+    """F55 catégorie déclarative d'un tool (FR-002).
+
+    Mapping vers ``DispatchCategory`` :
+    - ``ASK``     → ``SSE_ONLY`` (bottom sheet F39)
+    - ``SHOW``    → ``SSE_ONLY`` (viz inline F40)
+    - ``MUTATION``→ ``DB_MUTATION`` (UPDATE + audit + EventBus)
+    - ``READ``    → ``REINVOKE_LLM`` (résultat sérialisé → ToolMessage)
+    """
+
+    ASK = "ask"
+    SHOW = "show"
+    MUTATION = "mutation"
+    READ = "read"
+
+
+def map_tool_to_dispatch_category(tc: ToolCategory) -> DispatchCategory:
+    """Mappe ``ToolCategory`` (déclaratif) → ``DispatchCategory`` (runtime)."""
+    if tc in (ToolCategory.ASK, ToolCategory.SHOW):
+        return DispatchCategory.SSE_ONLY
+    if tc == ToolCategory.MUTATION:
+        return DispatchCategory.DB_MUTATION
+    return DispatchCategory.REINVOKE_LLM
+
+
 # ---------------------------------------------------------------------------
 # Sous-types Pydantic
 # ---------------------------------------------------------------------------
@@ -130,17 +156,89 @@ class ValidatedToolCall(BaseModel):
 
 
 class ToolDispatchResult(BaseModel):
-    """Résultat du dispatcher (FR-007)."""
+    """Résultat du dispatcher (FR-007 / F55 enrichi).
+
+    Variantes mutuellement exclusives via ``kind`` :
+    - ``frontend_event``  : ASK / SHOW (output = arguments validés)
+    - ``mutation_result`` : MUTATION (entity_type/entity_id/fields_updated/audit_log_id)
+    - ``tool_message``    : READ (output['content'] = JSON sérialisé)
+    - ``error``           : erreur fail-safe (error_summary obligatoire)
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     tool_call_id: str
     tool_name: str
     category: DispatchCategory
-    status: Literal["ok", "error", "skipped"]
+    status: Literal[
+        "ok",
+        "error",
+        "skipped",
+        "rate_limited",
+        "cancelled_by_user",
+        "confirmation_expired",
+        "pending_confirmation",
+    ]
+    kind: Literal[
+        "frontend_event", "mutation_result", "tool_message", "error"
+    ] | None = None
     output: dict[str, Any] | None = None
     error_summary: str | None = None
     db_audit_id: UUID | None = None
+    # F55 — mutation_result enrichis
+    entity_type: str | None = None
+    entity_id: UUID | None = None
+    fields_updated: list[str] | None = None
+    audit_log_id: UUID | None = None
+    is_dry_run: bool = False
+    duration_ms: int | None = None
+
+    @model_validator(mode="after")
+    def _kind_consistency(self) -> ToolDispatchResult:
+        """Cohérence kind ↔ champs (FR-003)."""
+        if self.kind == "mutation_result" and self.status == "ok":
+            if not (self.entity_type and self.entity_id):
+                raise ValueError(
+                    "mutation_result requires entity_type+entity_id when status=ok"
+                )
+        if self.kind == "error" and self.status != "ok":
+            if not self.error_summary:
+                raise ValueError("error kind requires error_summary")
+        return self
+
+
+class MutationResult(BaseModel):
+    """Retour standardisé d'un handler ``@mutation_handler`` (F55 / FR-006)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    entity_type: str
+    entity_id: UUID
+    fields_updated: list[str] = Field(default_factory=list)
+    snapshot: dict[str, Any] | None = None
+    audit_log_id: UUID | None = None
+
+
+class RateLimitDecision(BaseModel):
+    """Décision du rate limiter (FR-010)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    allowed: bool
+    remaining: int = 0
+    reset_at: datetime | None = None
+    reason: Literal["ok", "exceeded", "store_unavailable"] = "ok"
+
+
+class PendingConfirmation(BaseModel):
+    """Confirmation en attente (FR-012). Persistée dans agent_run.metadata."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tool_call_id: str
+    tool_name: str
+    arguments: dict[str, Any]
+    expires_at: datetime
 
 
 _AGENT_ERROR_CODES = Literal[
@@ -238,6 +336,12 @@ class AgentState(BaseModel):
     retry_count: int = Field(default=0, ge=0)
     reinvoke_count: int = Field(default=0, ge=0)
 
+    # F55 — Compteurs / mode dispatch ------------------------------------------
+    tool_calls_count_in_turn: int = Field(default=0, ge=0)
+    dry_run: bool = False
+    pending_confirmations: dict[str, PendingConfirmation] = Field(default_factory=dict)
+    agent_run_id: UUID | None = None
+
     # Erreurs accumulées -------------------------------------------------------
     errors: Annotated[list[AgentError], _append] = Field(default_factory=list)
 
@@ -258,11 +362,16 @@ __all__ = [
     "ContextJson",
     "DispatchCategory",
     "Intent",
+    "MutationResult",
+    "PendingConfirmation",
+    "RateLimitDecision",
     "ThreadId",
     "ToolCall",
+    "ToolCategory",
     "ToolDispatchResult",
     "ValidatedToolCall",
     "compose_thread_id",
     "extract_account_prefix",
+    "map_tool_to_dispatch_category",
     "validate_thread_id_format",
 ]

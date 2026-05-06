@@ -100,6 +100,16 @@ class Settings(BaseSettings):
     # Encoding tiktoken utilisé pour ``count_tokens`` (FR-005, FR-011).
     LLM_TIKTOKEN_ENCODING: str = Field(default="cl100k_base", min_length=1)
 
+    # --- F55 (Agent Tool Dispatch & SSE Bridge) ---
+    # Backend du rate limiter : ``memory`` (dev) ou ``redis`` (prod).
+    LLM_AGENT_RATE_LIMIT_BACKEND: Literal["memory", "redis"] = "memory"
+    # Budget de tokens pour la sérialisation des résultats READ (FR-015).
+    LLM_AGENT_READ_BUDGET_TOKENS: int = Field(default=1500, ge=128, le=64000)
+    # TTL applicatif d'une confirmation user (FR-012, US3).
+    LLM_AGENT_CONFIRMATION_TTL_SECONDS: int = Field(default=180, ge=30, le=3600)
+    # Header HTTP utilisé par les admins pour activer le mode dry_run (US6).
+    LLM_AGENT_DRY_RUN_HEADER: str = Field(default="X-Agent-DryRun", min_length=1)
+
     @property
     def database_url(self) -> str:
         """URL SQLAlchemy/psycopg pour PostgreSQL."""
