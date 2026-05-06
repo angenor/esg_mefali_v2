@@ -52,9 +52,34 @@ from app.agent.state import (
 )
 from app.config import get_settings
 from app.core.session import set_db_session_context
-from app.db import SessionLocal
+from app.db import SessionLocal, get_engine_migrator
 
 logger = logging.getLogger(__name__)
+
+
+def _open_admin_session() -> Session:
+    """Ouvre une session pour les UPDATEs admin du runner (complete_run,
+    update_guardrails_flags, mark_run_cancelled).
+
+    Stratégie : on bind sur l'``engine_migrator`` (rôle ``migrator``) qui a
+    ``BYPASSRLS`` et tous les privilèges. Cela évite trois pièges :
+
+    1. Le rôle ``app_admin`` n'existe pas en local (seul ``migrator`` est
+       garanti par la migration 0002). ``SET LOCAL ROLE app_admin`` échoue
+       silencieusement et le UPDATE retombe sur ``app_user`` qui n'a pas
+       le privilège.
+    2. La RLS policy ``agent_run_account_isolation`` (migration 0032) ne
+       gère pas le cas ``app.current_account_id = ''`` (manque NULLIF) →
+       ``invalid input syntax for type uuid: \"\"`` quand la session admin
+       n'a pas reçu le contexte RLS.
+    3. Le pool peut retourner une connection avec une transaction sale ;
+       ``rollback()`` défensif au call-site reste utile.
+
+    L'invariant P3 (audit append-only) reste respecté : seules les colonnes
+    ``agent_run`` et ``agent_run_step`` sont touchées, et uniquement par le
+    runner via ces helpers.
+    """
+    return Session(bind=get_engine_migrator())
 
 
 class ThreadAccessDenied(LookupError):
@@ -368,22 +393,16 @@ def _safe_complete(
     error_summary: str | None = None,
     start_ts: float | None = None,
 ) -> None:
-    """UPDATE de complétion en élevant temporairement le rôle.
+    """UPDATE de complétion via une session ``migrator`` (BYPASSRLS).
 
-    Le rôle ``app_user`` n'a pas UPDATE sur ``agent_run`` ; on bascule sur
-    ``app_admin`` le temps du UPDATE puis on ``RESET ROLE``.
+    Voir :func:`_open_admin_session` pour la justification du rôle utilisé.
     """
     total_latency_ms: int | None = None
     if start_ts is not None:
         total_latency_ms = int((time.perf_counter() - start_ts) * 1000)
     try:
-        # Ouvre une nouvelle transaction admin
-        with SessionLocal() as admin_session:
-            try:
-                admin_session.execute(text("SET LOCAL ROLE app_admin"))
-            except Exception:
-                # En dev, le rôle peut ne pas exister ; on tente sans
-                logger.debug("SET LOCAL ROLE app_admin failed (dev mode?)")
+        with _open_admin_session() as admin_session:
+            admin_session.rollback()
             complete_run(
                 admin_session,
                 run_id=run_id,
@@ -409,11 +428,8 @@ def _safe_update_guardrails_flags(
 ) -> None:
     """F58 — UPDATE des 6 flags guardrails (FR-017). Best-effort, non bloquant."""
     try:
-        with SessionLocal() as admin_session:
-            try:
-                admin_session.execute(text("SET LOCAL ROLE app_admin"))
-            except Exception:
-                logger.debug("SET LOCAL ROLE app_admin skipped")
+        with _open_admin_session() as admin_session:
+            admin_session.rollback()
             update_guardrails_flags(
                 admin_session,
                 run_id=run_id,
@@ -432,11 +448,8 @@ def _safe_update_guardrails_flags(
 def _safe_mark_cancelled(session: Session, *, run_id: UUID) -> None:
     """Marque un run comme cancelled (US8)."""
     try:
-        with SessionLocal() as admin_session:
-            try:
-                admin_session.execute(text("SET LOCAL ROLE app_admin"))
-            except Exception:
-                pass
+        with _open_admin_session() as admin_session:
+            admin_session.rollback()
             mark_run_cancelled(admin_session, run_id=run_id)
             admin_session.commit()
     except Exception:  # pragma: no cover
@@ -464,6 +477,7 @@ def _persist_assistant(
         from app.chat import service as chat_service
 
         with SessionLocal() as chat_session:
+            chat_session.rollback()  # purger pool sale (cas TestClient)
             set_db_session_context(
                 chat_session,
                 user_id=user_id,
@@ -499,6 +513,7 @@ def _flush_recall_log_entries(state: AgentState) -> None:
         return
     try:
         with SessionLocal() as session:
+            session.rollback()  # purger pool sale (cas TestClient)
             try:
                 session.execute(
                     text(
@@ -512,7 +527,7 @@ def _flush_recall_log_entries(state: AgentState) -> None:
                         )
                     )
             except Exception:  # pragma: no cover
-                pass
+                session.rollback()
             flush_entries(session, entries)
             session.commit()
     except Exception:  # noqa: BLE001

@@ -20,13 +20,6 @@ from tests.e2e.conftest import _register_login_csrf, _send_chat_message
 
 
 @pytest.mark.e2e
-@pytest.mark.skip(
-    reason=(
-        "F58 runner bug: complete_run() échoue avec InFailedSqlTransaction dans "
-        "le contexte TestClient — agent_run.mode n'est pas mis à jour avec 'minimal'. "
-        "Bug applicatif pré-existant, non corrigé par e2e-runner."
-    )
-)
 def test_e2e_minimal_mode_only_sourcing_tools(
     client: TestClient, unique_email: str, valid_password: str, fake_llm_factory
 ) -> None:

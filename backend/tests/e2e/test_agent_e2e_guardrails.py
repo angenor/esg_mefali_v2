@@ -33,13 +33,6 @@ def _reset_circuit() -> None:
 
 
 @pytest.mark.e2e
-@pytest.mark.skip(
-    reason=(
-        "F58 runner bug: complete_run() échoue avec InFailedSqlTransaction dans "
-        "le contexte TestClient (admin_session corrompue) — injection_detected n'est "
-        "pas persisté en DB. Bug applicatif pré-existant, non corrigé par e2e-runner."
-    )
-)
 def test_e2e_injection_message_logged_and_wrapped(
     client: TestClient, unique_email: str, valid_password: str, fake_llm_factory
 ) -> None:
@@ -70,13 +63,6 @@ def test_e2e_injection_message_logged_and_wrapped(
 
 
 @pytest.mark.e2e
-@pytest.mark.skip(
-    reason=(
-        "F58 runner bug: complete_run() échoue avec InFailedSqlTransaction dans "
-        "le contexte TestClient — pii_masked_count n'est pas persisté en DB. "
-        "Bug applicatif pré-existant, non corrigé par e2e-runner."
-    )
-)
 def test_e2e_pii_masked_in_logs_intact_for_llm(
     client: TestClient, unique_email: str, valid_password: str, fake_llm_factory
 ) -> None:
