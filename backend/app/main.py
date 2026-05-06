@@ -308,6 +308,11 @@ app.include_router(f52_users_router)
 # F53 — Agent LangGraph healthcheck
 app.include_router(agent_health_router)
 
+# F54 — Admin endpoint GET /admin/agent-runs/{id}/prompt (FR-014)
+from app.agent.admin_router import router as agent_admin_prompt_router  # noqa: E402
+
+app.include_router(agent_admin_prompt_router)
+
 
 @app.get("/health")
 def health() -> Any:
