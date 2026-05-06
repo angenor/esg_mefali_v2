@@ -56,7 +56,10 @@ async def _lifespan(app_: FastAPI):
     import time as _time
 
     settings = get_settings()
-    if settings.LLM_AGENT_MODE != "langgraph":
+    # F58 — En mode ``minimal`` (FR-025), on garde LangGraph compilé : seul
+    # le sélecteur de tools restreint l'ensemble. ``raw`` reste un proxy LLM
+    # sans graph.
+    if settings.LLM_AGENT_MODE == "raw":
         logger.info("[agent] F53 mode=raw — agent désactivé, fallback proxy LLM")
         app_.state.agent_graph = None
         app_.state.agent_checkpointer = None
@@ -184,6 +187,9 @@ app.add_middleware(
 # F56 — Admin agent metrics (sourcing compliance)
 from app.admin.agent_metrics import router as admin_agent_metrics_router  # noqa: E402
 
+# F58 — Admin agent tools kill-switch
+from app.admin.agent_tools import router as admin_agent_tools_router  # noqa: E402
+
 # Routers
 app.include_router(auth_router)
 app.include_router(users_router)
@@ -191,6 +197,12 @@ app.include_router(admin_router)
 app.include_router(
     admin_agent_metrics_router,
     prefix="/admin/agent/metrics",
+    tags=["admin", "agent"],
+)
+# F58 — Admin agent tools (kill-switch)
+app.include_router(
+    admin_agent_tools_router,
+    prefix="/admin/agent/tools",
     tags=["admin", "agent"],
 )
 app.include_router(sources_router)

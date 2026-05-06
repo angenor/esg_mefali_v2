@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/057-agent-memory-rag/plan.md
+specs/058-agent-guardrails-eval/plan.md
 <!-- SPECKIT END -->
 
 The Spec Kit "current feature" is tracked in `.specify/feature.json` (`feature_directory`). When unsure which feature is active, read that file first — it points to the spec/plan/tasks under `specs/`.
@@ -91,6 +91,20 @@ Domain packages (`candidatures/`, `chat/`, `scoring/`, `matching/`, `dossier/`, 
 The orchestration is a strict pipeline: classifier → tool-subset selector (≤10 tools) → LLM with filtered tools → **strict Pydantic v2 validation** (`extra='forbid'`, closed enums, bounds) → max 2 retries on structured error → text fallback. Each tool MUST have docstring "use when" / "don't use when". A turn must execute at most 1–2 skills. Code lives under `app/llm/`, `app/orchestrator/`, `app/skills/`, `app/prompts/`.
 
 Skills are subject to **eval gating** (≥50 cases golden set) before publication — see `backend/tests/llm_eval/` and `app/eval/`.
+
+### Agent guardrails (F58)
+
+`app/agent/guardrails/` ajoute une couche transversale de protection :
+`anti_injection` (FR-001/2), `pii_detector` (FR-003/4), `lang_check`
+(FR-005/6), `tool_status` kill-switch admin (FR-007/9), `circuit_breaker`
+(FR-010/11), `budget` sous-quotas (FR-012/15), `loop_detector` (FR-016).
+Endpoints admin sous `app/admin/agent_tools.py` (3 endpoints kill-switch)
+et `app/admin/agent_metrics.py` (étendu F58). Eval continue via
+`backend/scripts/eval_agent.py` (mock chaque PR + real nightly /
+on-demand label `eval-required`) et `eval_jailbreak.py`. Migration
+0037 ajoute la table `agent_tool_status` + 3 colonnes account
+(sous-quotas) + 6 colonnes agent_run (flags) + 1 colonne agent_run_step
+(`flow`).
 
 ### Frontend (`frontend/app/`)
 

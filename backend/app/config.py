@@ -80,9 +80,11 @@ class Settings(BaseSettings):
     FX_DEFAULT_DISPLAY_CURRENCY: str = "XOF"
     FX_STALE_ALERT_DAYS: int = 7
 
-    # --- F53 (Agent LangGraph) ---
-    # Mode : `langgraph` (défaut, agent activé) ou `raw` (proxy LLM F13).
-    LLM_AGENT_MODE: Literal["langgraph", "raw"] = "langgraph"
+    # --- F53 / F58 (Agent LangGraph + guardrails) ---
+    # Mode : ``langgraph`` (agent activé), ``raw`` (proxy LLM F13), ou
+    # ``minimal`` (F58 / FR-025 mode dégradé : seuls cite_source / flag_unsourced
+    # / réponse texte sont autorisés).
+    LLM_AGENT_MODE: Literal["langgraph", "raw", "minimal"] = "langgraph"
     # Nombre max de tools exposés au LLM par tour (P9, FR-015).
     LLM_AGENT_MAX_TOOLS: int = Field(default=10, ge=1, le=50)
     # Retries Pydantic max avant fallback texte (FR-006).

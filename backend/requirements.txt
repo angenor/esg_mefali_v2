@@ -44,6 +44,9 @@ aiosmtplib>=3.0,<4
 # F03 — Source anti-hallucination middleware decision cache
 cachetools>=5.3,<6
 
+# F58 — Lang detection guardrails
+langdetect>=1.0.9,<2.0
+
 # F24 — Rapport de Conformité PDF (reportlab pur Python + matplotlib pour radar)
 reportlab>=4.0,<5
 matplotlib>=3.8,<4

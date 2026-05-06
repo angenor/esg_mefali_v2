@@ -179,6 +179,47 @@ def mark_run_cancelled(
     )
 
 
+def update_guardrails_flags(
+    session: Session,
+    *,
+    run_id: UUID,
+    injection_detected: bool = False,
+    pii_masked_count: int = 0,
+    language_corrected: bool = False,
+    loop_detected: bool = False,
+    circuit_breaker_open: bool = False,
+    mode: str = "langgraph",
+) -> None:
+    """F58 — UPDATE des 6 flags guardrails sur ``agent_run`` (FR-017).
+
+    Append-only au sens P3 : un seul UPDATE final par run, jamais re-écrit.
+    Nécessite ``SET LOCAL ROLE app_admin`` côté caller (pattern complete_run).
+    """
+    if mode not in ("langgraph", "raw", "minimal"):
+        raise ValueError(f"mode invalide : {mode!r}")
+    session.execute(
+        text(
+            "UPDATE agent_run SET "
+            "injection_detected = :inj, "
+            "pii_masked_count = :pii, "
+            "language_corrected = :lang, "
+            "loop_detected = :loop, "
+            "circuit_breaker_open = :cb, "
+            "mode = :mode "
+            "WHERE id = :rid"
+        ),
+        {
+            "inj": injection_detected,
+            "pii": pii_masked_count,
+            "lang": language_corrected,
+            "loop": loop_detected,
+            "cb": circuit_breaker_open,
+            "mode": mode,
+            "rid": run_id,
+        },
+    )
+
+
 def mark_run_timeout(
     session: Session,
     *,
@@ -261,4 +302,5 @@ __all__ = [
     "persist_prompt_hash",
     "record_step",
     "start_run",
+    "update_guardrails_flags",
 ]

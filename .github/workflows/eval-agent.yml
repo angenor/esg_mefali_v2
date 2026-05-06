@@ -1,0 +1,89 @@
+name: F58 — Agent eval (mock smoke + nightly real)
+
+on:
+  pull_request:
+    paths:
+      - 'backend/app/agent/**'
+      - 'backend/scripts/eval_agent.py'
+      - 'backend/scripts/eval_jailbreak.py'
+      - 'backend/tests/golden/**'
+      - 'backend/tests/eval/**'
+  schedule:
+    # Tous les jours à 02:00 UTC (run nocturne real LLM)
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  eval-mock:
+    name: Mock eval (smoke — chaque PR)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend deps
+        run: |
+          python -m venv backend/.venv
+          source backend/.venv/bin/activate
+          pip install -r backend/requirements.txt
+      - name: Run eval_agent (mock)
+        run: |
+          source backend/.venv/bin/activate
+          cd backend
+          python scripts/eval_agent.py --mode mock --threshold 0.95 \
+            --cases-file tests/golden/agent_e2e_smoke.jsonl \
+            --report eval_agent_mock_report.json
+      - name: Run eval_jailbreak (mock)
+        run: |
+          source backend/.venv/bin/activate
+          cd backend
+          python scripts/eval_jailbreak.py --mode mock \
+            --cases-file tests/golden/jailbreak_smoke.jsonl \
+            --report eval_jailbreak_mock_report.json
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-mock-reports
+          path: |
+            backend/eval_agent_mock_report.json
+            backend/eval_jailbreak_mock_report.json
+
+  eval-real:
+    name: Real LLM eval (nightly + on-demand label eval-required)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'eval-required')) ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend deps
+        run: |
+          python -m venv backend/.venv
+          source backend/.venv/bin/activate
+          pip install -r backend/requirements.txt
+      - name: Run eval_agent (real)
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+        run: |
+          source backend/.venv/bin/activate
+          cd backend
+          python scripts/eval_agent.py --mode real --threshold 0.75 \
+            --cases-file tests/golden/agent_e2e.jsonl \
+            --report eval_agent_real_report.json
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-real-reports
+          path: backend/eval_agent_real_report.json

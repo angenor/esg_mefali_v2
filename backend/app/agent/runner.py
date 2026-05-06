@@ -35,6 +35,7 @@ from app.agent.repository import (
     complete_run,
     mark_run_cancelled,
     start_run,
+    update_guardrails_flags,
 )
 from app.agent.sse_bridge import (
     make_done_event,
@@ -219,7 +220,7 @@ async def run_agent(
                         content=final_state.final_text,
                     )
 
-                # 9. Compléter agent_run
+                # 9. Compléter agent_run + écrire les flags guardrails F58
                 if run_id is not None:
                     final_status = "ok"
                     err_summary: str | None = None
@@ -236,6 +237,24 @@ async def run_agent(
                         retry_count=final_state.retry_count,
                         error_summary=err_summary,
                         start_ts=start_ts,
+                    )
+                    # F58 — Persiste les flags guardrails (FR-017).
+                    _safe_update_guardrails_flags(
+                        run_id=run_id,
+                        injection_detected=getattr(
+                            final_state, "injection_detected", False
+                        ),
+                        pii_masked_count=getattr(
+                            final_state, "pii_masked_count", 0
+                        ),
+                        language_corrected=getattr(
+                            final_state, "language_corrected", False
+                        ),
+                        loop_detected=getattr(final_state, "loop_detected", False),
+                        circuit_breaker_open=getattr(
+                            final_state, "circuit_breaker_open", False
+                        ),
+                        mode=settings.LLM_AGENT_MODE,
                     )
 
                 # 10. Done event
@@ -376,6 +395,38 @@ def _safe_complete(
             admin_session.commit()
     except Exception:  # pragma: no cover - tracing must never break run
         logger.exception("Failed to complete agent_run %s", run_id)
+
+
+def _safe_update_guardrails_flags(
+    *,
+    run_id: UUID,
+    injection_detected: bool,
+    pii_masked_count: int,
+    language_corrected: bool,
+    loop_detected: bool,
+    circuit_breaker_open: bool,
+    mode: str,
+) -> None:
+    """F58 — UPDATE des 6 flags guardrails (FR-017). Best-effort, non bloquant."""
+    try:
+        with SessionLocal() as admin_session:
+            try:
+                admin_session.execute(text("SET LOCAL ROLE app_admin"))
+            except Exception:
+                logger.debug("SET LOCAL ROLE app_admin skipped")
+            update_guardrails_flags(
+                admin_session,
+                run_id=run_id,
+                injection_detected=injection_detected,
+                pii_masked_count=pii_masked_count,
+                language_corrected=language_corrected,
+                loop_detected=loop_detected,
+                circuit_breaker_open=circuit_breaker_open,
+                mode=mode,
+            )
+            admin_session.commit()
+    except Exception:  # noqa: BLE001 - tracing must never break run
+        logger.debug("Failed to update guardrails flags %s", run_id, exc_info=True)
 
 
 def _safe_mark_cancelled(session: Session, *, run_id: UUID) -> None:

@@ -1,5 +1,5 @@
 # ESG Mefali — Makefile (raccourcis dev)
-.PHONY: help setup db-up db-down db-reset migrate backend frontend test test-backend test-frontend lint clean
+.PHONY: help setup db-up db-down db-reset migrate backend frontend test test-backend test-frontend lint clean test-guardrails eval-agent eval-jailbreak
 
 help:
 	@echo "Cibles disponibles :"
@@ -62,3 +62,13 @@ clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	find . -type d -name .pytest_cache -prune -exec rm -rf {} +
 	find . -type d -name .ruff_cache -prune -exec rm -rf {} +
+
+# F58 — Agent guardrails & eval
+test-guardrails:
+	cd backend && . .venv/bin/activate && pytest tests/unit/agent/guardrails/ tests/integration/agent/test_route_anti_injection.py tests/integration/agent/test_select_tools_guardrails.py tests/integration/admin/test_agent_tools_router.py tests/integration/utils/test_ops_alerting.py --cov=app.agent.guardrails --cov-fail-under=85
+
+eval-agent:
+	cd backend && . .venv/bin/activate && python scripts/eval_agent.py --mode mock --threshold 0.75 --cases-file tests/golden/agent_e2e.jsonl --report eval_agent_mock_report.json
+
+eval-jailbreak:
+	cd backend && . .venv/bin/activate && python scripts/eval_jailbreak.py --mode mock --cases-file tests/golden/jailbreak_prompts.jsonl --report eval_jailbreak_mock_report.json
