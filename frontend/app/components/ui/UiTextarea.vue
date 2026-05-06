@@ -3,6 +3,13 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type { UiSize } from '~/types/ui'
 import { useFieldId } from '~/composables/useFieldId'
 
+defineOptions({
+  // Forward extra attrs (data-testid, custom HTML attributes) on the
+  // textarea element rather than the wrapper div, so E2E selectors and
+  // labelling tools can target the actual input.
+  inheritAttrs: false,
+})
+
 interface Props {
   modelValue?: string
   rows?: number
@@ -85,6 +92,7 @@ defineExpose({ focus: () => ta.value?.focus() })
       :aria-describedby="describedBy"
       :aria-label="ariaLabel"
       class="ui-textarea__control"
+      v-bind="$attrs"
       @input="onInput"
       @focus="emit('focus', $event)"
       @blur="emit('blur', $event)"
