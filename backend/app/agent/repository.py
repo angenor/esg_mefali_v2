@@ -91,6 +91,42 @@ def record_step(
     return row[0]
 
 
+def persist_prompt_hash(
+    session: Session,
+    *,
+    run_id: UUID,
+    system_prompt_hash: str,
+    prompt_version: str,
+) -> None:
+    """F54 / FR-015 — Persiste le hash SHA-256 du system prompt + version.
+
+    Appelé par le runner LangGraph **avant** :func:`complete_run`. Cette
+    fonction est sécurité-safe : si la session n'a pas les droits ``UPDATE``
+    sur ``agent_run`` (rôle ``app_user``), l'appelant doit d'abord élever
+    via ``SET LOCAL ROLE app_admin`` (cf. pattern :func:`complete_run`).
+
+    Format attendu : ``system_prompt_hash`` = 64 chars hex (SHA-256).
+    Le check constraint ``agent_run_prompt_hash_format`` garde cette
+    contrainte côté DB (idempotent en cas d'écriture LLM corrompue).
+    """
+    if not system_prompt_hash or len(system_prompt_hash) != 64:
+        raise ValueError(
+            "system_prompt_hash must be 64 hex chars (SHA-256 hexdigest)"
+        )
+    if not prompt_version:
+        raise ValueError("prompt_version must be non-empty")
+    if len(prompt_version) > 16:
+        raise ValueError("prompt_version max length is 16")
+    session.execute(
+        text(
+            "UPDATE agent_run "
+            "SET system_prompt_hash = :h, prompt_version = :v "
+            "WHERE id = :rid"
+        ),
+        {"h": system_prompt_hash.lower(), "v": prompt_version, "rid": run_id},
+    )
+
+
 def complete_run(
     session: Session,
     *,
@@ -192,12 +228,37 @@ def _truncate(s: str | None, *, max_len: int = 1000) -> str | None:
     return s if len(s) <= max_len else s[: max_len - 3] + "..."
 
 
+def get_prompt_for_admin(
+    session: Session, *, run_id: UUID
+) -> dict[str, Any] | None:
+    """F54 / FR-014 — Lit ``agent_run`` pour l'endpoint admin GET /prompt.
+
+    Renvoie ``{run_id, status, system_prompt_hash, prompt_version}`` ou
+    ``None`` si run inexistant. Le **prompt complet en clair** n'est PAS
+    persisté : il sera reconstruit par l'admin si nécessaire (cf.
+    ``admin_router.py``). Pour un run en erreur, on peut juste exposer le
+    hash (RGPD-friendly minimisation).
+    """
+    row = session.execute(
+        text(
+            "SELECT id, status::text AS status, system_prompt_hash, prompt_version "
+            "FROM agent_run WHERE id = :rid"
+        ),
+        {"rid": run_id},
+    ).mappings().fetchone()
+    if row is None:
+        return None
+    return dict(row)
+
+
 __all__ = [
     "complete_run",
+    "get_prompt_for_admin",
     "get_run",
     "list_steps",
     "mark_run_cancelled",
     "mark_run_timeout",
+    "persist_prompt_hash",
     "record_step",
     "start_run",
 ]

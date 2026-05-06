@@ -1,0 +1,84 @@
+openapi: 3.1.0
+info:
+  title: F54 — Admin Agent Run Prompt Endpoint
+  version: "2026.05"
+  description: >
+    Endpoint admin pour récupérer le prompt système d'un agent_run donné.
+    Renvoie uniquement le hash en mode normal ; le prompt complet en clair est
+    exposé seulement quand `agent_run.status = 'error'` (debug-friendly,
+    RGPD-friendly).
+
+paths:
+  /admin/agent-runs/{run_id}/prompt:
+    get:
+      summary: Récupérer le prompt d'un agent run (admin only)
+      operationId: getAgentRunPrompt
+      tags: [admin, agent]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Prompt info retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentRunPromptResponse'
+              examples:
+                normal_run:
+                  summary: Tour réussi (hash uniquement)
+                  value:
+                    run_id: "5b9f3d4e-…"
+                    status: "success"
+                    system_prompt_hash: "8f4a…1c"
+                    prompt_version: "2026.05"
+                    prompt: null
+                error_run:
+                  summary: Tour en erreur (prompt complet)
+                  value:
+                    run_id: "5b9f3d4e-…"
+                    status: "error"
+                    system_prompt_hash: "8f4a…1c"
+                    prompt_version: "2026.05"
+                    prompt: "Tu es ESG Mefali, l'assistant IA…"
+        '403':
+          description: User is not admin
+        '404':
+          description: agent_run not found OR user has no access (RLS)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AgentRunPromptResponse:
+      type: object
+      required: [run_id, status, system_prompt_hash, prompt_version]
+      additionalProperties: false
+      properties:
+        run_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, success, error]
+        system_prompt_hash:
+          type: string
+          minLength: 64
+          maxLength: 64
+          description: SHA-256 hex du prompt utilisé
+        prompt_version:
+          type: string
+          example: "2026.05"
+        prompt:
+          type: string
+          nullable: true
+          description: Prompt complet en clair, présent UNIQUEMENT si status=='error'

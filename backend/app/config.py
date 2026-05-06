@@ -94,6 +94,12 @@ class Settings(BaseSettings):
     # Compatibilité OpenAI clients pour HEAD /v1/models (healthcheck).
     LLM_HEALTH_TIMEOUT_S: float = Field(default=1.0, gt=0.0)
 
+    # --- F54 (Agent Context Builder) ---
+    # Budget de tokens pour le system prompt dynamique (NFR-002, FR-011).
+    LLM_AGENT_PROMPT_BUDGET_TOKENS: int = Field(default=4000, ge=512, le=64000)
+    # Encoding tiktoken utilisé pour ``count_tokens`` (FR-005, FR-011).
+    LLM_TIKTOKEN_ENCODING: str = Field(default="cl100k_base", min_length=1)
+
     @property
     def database_url(self) -> str:
         """URL SQLAlchemy/psycopg pour PostgreSQL."""
