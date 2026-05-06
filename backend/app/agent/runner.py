@@ -121,6 +121,15 @@ async def run_agent(
         except Exception:  # noqa: BLE001
             ctx = ContextJson(page_route="/")
 
+    # F58 / US12 — Drain in-flight : on capture le mode au début du run et
+    # on l'utilise tout le long. Si l'admin bascule ``LLM_AGENT_MODE`` en
+    # ``minimal`` pendant l'exécution, le run en cours conserve son mode
+    # initial (par ex. ``langgraph``) et seuls les nouveaux runs partent en
+    # ``minimal``. Sans ce snapshot, settings.LLM_AGENT_MODE est lu au
+    # moment de _safe_update_guardrails_flags et peut différer du mode
+    # effectivement appliqué pendant le tour.
+    initial_mode = settings.LLM_AGENT_MODE
+
     # 3. Initialisation state
     initial_state = AgentState(
         thread_id=thread_id,
@@ -128,6 +137,7 @@ async def run_agent(
         user_id=user_id,
         user_message=user_message,
         context_json=ctx,
+        agent_mode=initial_mode,
     )
 
     # 4. Compilation paresseuse si pas de graph fourni
@@ -254,7 +264,10 @@ async def run_agent(
                         circuit_breaker_open=getattr(
                             final_state, "circuit_breaker_open", False
                         ),
-                        mode=settings.LLM_AGENT_MODE,
+                        # US12 : on persiste le mode capturé au début du run,
+                        # PAS la valeur courante de settings (qui peut avoir
+                        # changé pendant le tour si admin a basculé minimal).
+                        mode=initial_mode,
                     )
 
                 # 10. Done event

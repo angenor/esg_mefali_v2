@@ -61,17 +61,28 @@ def record_step(
     tool_calls_count: int = 0,
     status: str = "ok",
     error: str | None = None,
+    flow: str = "conversation",
 ) -> UUID:
     """Insère un row ``agent_run_step`` (append-only).
 
     Status ∈ {ok, error, timeout, cancelled, skipped}.
+    Flow ∈ {conversation, ocr_analysis} — F58 / US6 sous-quotas.
+
+    Le ``flow`` détermine quel sous-quota (``daily_conversation_quota`` vs
+    ``daily_ocr_analysis_quota``) sera décrémenté par
+    :func:`app.agent.guardrails.budget.check_budget` au tour suivant. Le
+    caller (typiquement ``traced_node``) doit dériver le flow du contexte
+    (``state.context_json.page_route`` ou skill active) — voir
+    :func:`infer_flow_from_state`.
     """
+    if flow not in ("conversation", "ocr_analysis"):
+        raise ValueError(f"flow invalide : {flow!r}")
     row = session.execute(
         text(
             "INSERT INTO agent_run_step "
             "(run_id, account_id, node_name, latency_ms, tokens_in, tokens_out, "
-            " tool_calls_count, status, error) "
-            "VALUES (:rid, :aid, :nn, :lat, :ti, :to, :tcc, :st, :err) "
+            " tool_calls_count, status, error, flow) "
+            "VALUES (:rid, :aid, :nn, :lat, :ti, :to, :tcc, :st, :err, :flow) "
             "RETURNING id"
         ),
         {
@@ -84,11 +95,51 @@ def record_step(
             "tcc": tool_calls_count,
             "st": status,
             "err": _truncate(error),
+            "flow": flow,
         },
     ).fetchone()
     if row is None:  # pragma: no cover - defensive
         raise RuntimeError("agent_run_step INSERT n'a pas retourné de id")
     return row[0]
+
+
+# F58 / US6 — Heuristique d'auto-tagging du flow ----------------------------
+
+
+_OCR_KEYWORDS = (
+    "ocr",
+    "document",
+    "documents",
+    "pieces-jointes",
+    "rapport",
+    "extract",
+    "scan",
+)
+
+
+def infer_flow(
+    *,
+    page_route: str | None = None,
+    skill_name: str | None = None,
+    node_name: str | None = None,
+) -> str:
+    """F58 / US6 — Déduit ``flow`` à partir du contexte de la requête.
+
+    Heuristique conservatrice : on retourne ``ocr_analysis`` UNIQUEMENT si
+    un signal explicite OCR/document apparaît dans le route, le skill ou
+    le node. Sinon défaut ``conversation``.
+
+    Cette stratégie évite les faux positifs sur les pages /chat où
+    l'utilisateur peut mentionner ESG sans déclencher de pipeline OCR.
+    """
+    haystack = " ".join(
+        s.lower()
+        for s in (page_route or "", skill_name or "", node_name or "")
+        if s
+    )
+    if not haystack:
+        return "conversation"
+    return "ocr_analysis" if any(kw in haystack for kw in _OCR_KEYWORDS) else "conversation"
 
 
 def persist_prompt_hash(
@@ -296,6 +347,7 @@ __all__ = [
     "complete_run",
     "get_prompt_for_admin",
     "get_run",
+    "infer_flow",
     "list_steps",
     "mark_run_cancelled",
     "mark_run_timeout",

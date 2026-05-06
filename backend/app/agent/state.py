@@ -248,6 +248,9 @@ _AGENT_ERROR_CODES = Literal[
     "timeout",
     "cancelled",
     "internal",
+    # F58 / US7 — boucle d'agent détectée par loop_detector (3x mêmes args
+    # ou > 10 calls par tour). Non retriable, traité par compose_response.
+    "loop_detected",
 ]
 
 
@@ -355,6 +358,8 @@ class AgentState(BaseModel):
 
     # F56 — Sourcing enforcement (FR-009/FR-019) -------------------------------
     sourcing_retry_count: Annotated[int, _max_reducer] = Field(default=0, ge=0)
+    # F58 / US3 — compteur de retry pour la dérive linguistique (max 1).
+    lang_retry_count: Annotated[int, _max_reducer] = Field(default=0, ge=0)
     sourcing_decision: (
         Literal["accept", "retry", "fallback", "annotate"] | None
     ) = None
