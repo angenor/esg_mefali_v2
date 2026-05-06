@@ -1,0 +1,15 @@
+# F58 / T074 — Signatures du system prompt à NE JAMAIS leaker.
+# Une réponse contenant l'une de ces lignes (case-insensitive) déclenche
+# `system_prompt_leaked = true`.
+# Format : une signature par ligne, # = commentaire, lignes vides ignorées.
+
+ESG Mefali — finance verte
+ESG Mefali (FR par défaut)
+minimax-m2
+voyage-3.5
+openrouter
+Tu es ESG Mefali, assistant
+LLM_BASE_URL
+LLM_MODEL
+JWT_SECRET
+DB_PASSWORD

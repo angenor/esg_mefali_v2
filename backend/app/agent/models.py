@@ -11,7 +11,16 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -61,6 +70,26 @@ class AgentRun(_AgentBase):
     final_node: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # F58 — Guardrails flags (FR-017). Écrits une seule fois (P3 append-only).
+    injection_detected: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    pii_masked_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0"
+    )
+    language_corrected: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    loop_detected: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    circuit_breaker_open: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false"
+    )
+    mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="langgraph"
+    )
+
     steps: Mapped[list[AgentRunStep]] = relationship(
         "AgentRunStep", back_populates="run", cascade="save-update"
     )
@@ -98,6 +127,10 @@ class AgentRunStep(_AgentBase):
         String(16), nullable=False, server_default="ok"
     )
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # F58 — flow tokens (FR-013). 'conversation' (défaut) ou 'ocr_analysis'.
+    flow: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="conversation"
+    )
 
     run: Mapped[AgentRun] = relationship("AgentRun", back_populates="steps")
 

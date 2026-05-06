@@ -92,6 +92,20 @@ The orchestration is a strict pipeline: classifier → tool-subset selector (≤
 
 Skills are subject to **eval gating** (≥50 cases golden set) before publication — see `backend/tests/llm_eval/` and `app/eval/`.
 
+### Agent guardrails (F58)
+
+`app/agent/guardrails/` ajoute une couche transversale de protection :
+`anti_injection` (FR-001/2), `pii_detector` (FR-003/4), `lang_check`
+(FR-005/6), `tool_status` kill-switch admin (FR-007/9), `circuit_breaker`
+(FR-010/11), `budget` sous-quotas (FR-012/15), `loop_detector` (FR-016).
+Endpoints admin sous `app/admin/agent_tools.py` (3 endpoints kill-switch)
+et `app/admin/agent_metrics.py` (étendu F58). Eval continue via
+`backend/scripts/eval_agent.py` (mock chaque PR + real nightly /
+on-demand label `eval-required`) et `eval_jailbreak.py`. Migration
+0037 ajoute la table `agent_tool_status` + 3 colonnes account
+(sous-quotas) + 6 colonnes agent_run (flags) + 1 colonne agent_run_step
+(`flow`).
+
 ### Frontend (`frontend/app/`)
 
 Nuxt 4 (Composition API) + Pinia + Tailwind v4 (`@import tailwindcss`) + chart.js + mermaid + Leaflet + gsap + driver.js + toast-ui editor + `@langchain/langgraph` (front-side LLM orchestration) + nuxt-security. Routes in `pages/`, composables in `composables/` (e.g., `useHealth()`), styles in `assets/css/main.css`.

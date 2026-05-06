@@ -19,7 +19,7 @@
     "57": "agent-memory-rag",
     "58": "agent-guardrails-eval"
   },
-  "done": ["53", "54", "55", "56", "57"],
+  "done": ["53", "54", "55", "56", "57", "58"],
   "in_progress": [],
   "blocked": [],
   "_baseline_done_pre_session": "F01-F52 considérées comme déjà mergées dans main (audit complet F52 done, PR #35 + #36 mergées). Les deps externes (F11, F12, F13, F14, F15, F16, F17, F18, F19, F21, F35, F39, F40, F41) sont assumées présentes."

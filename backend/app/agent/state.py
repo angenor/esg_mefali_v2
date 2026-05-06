@@ -370,6 +370,14 @@ class AgentState(BaseModel):
         default_factory=list, exclude=True
     )
 
+    # F58 — Guardrails flags (FR-017) écrits sur agent_run en fin de run.
+    injection_detected: bool = False
+    pii_masked_count: int = 0
+    language_corrected: bool = False
+    loop_detected: bool = False
+    circuit_breaker_open: bool = False
+    agent_mode: str = "langgraph"  # 'langgraph' | 'raw' | 'minimal'
+
     # Erreurs accumulées -------------------------------------------------------
     errors: Annotated[list[AgentError], _append] = Field(default_factory=list)
 

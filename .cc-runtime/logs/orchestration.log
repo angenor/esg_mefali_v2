@@ -35,3 +35,8 @@
 2026-05-06T20:49:56Z | 57-agent-memory-rag | PHASE_B_DONE | tests=1003 | coverage=88.5% | alembic=0036 | resumed_from_partial=true | scope_partial=false
 2026-05-06T20:55:22Z | 56-agent-sourcing-enforcement | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/40 | merged | e2e=3/3_backend+3_quarantined
 2026-05-06T20:55:22Z | 57-agent-memory-rag | PHASE_B_PRIME_DONE | e2e=2_quarantined_csrf_pre_existing | backend_134_tests_cover | ready_for_pr=true
+2026-05-06T20:56:20Z | 57-agent-memory-rag | DONE | PR=https://github.com/angenor/esg_mefali_v2/pull/41 | merged | e2e=2_quarantined_csrf_pre_existing
+2026-05-06T20:56:20Z | wave-4 | START | parallel_count=1 | features=58
+2026-05-06T21:58:43Z | 58-agent-guardrails-eval | PHASE_B_DONE | tests=1121 | coverage=90.96% | alembic=0037 | golden_50=100% | jailbreak_20=0_leak | scope_partial=true
+2026-05-06T22:11:50Z | 58-agent-guardrails-eval | PHASE_B_PRIME_DONE | e2e=7/11_verts+3_quarantined_lifespan+1_xfailed | ready_for_pr=true
+2026-05-06T22:11:50Z | wave-4 | END | phase_h_done=6/6

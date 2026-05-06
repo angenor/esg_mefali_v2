@@ -154,7 +154,8 @@ def post_message(
             db2.close()
 
     settings = get_settings()
-    use_agent = settings.LLM_AGENT_MODE == "langgraph"
+    # F58 — ``minimal`` reste sous LangGraph (juste avec sous-set de tools).
+    use_agent = settings.LLM_AGENT_MODE in ("langgraph", "minimal")
 
     if use_agent:
         # F53 — Agent LangGraph
