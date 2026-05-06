@@ -97,8 +97,28 @@ async def run_agent(
         ctx = ContextJson(page_route="/")
     elif isinstance(context_json, ContextJson):
         ctx = context_json
+    elif isinstance(context_json, dict):
+        # Filtrage : l'agent ContextJson a un champ 'page_route'. Si on reçoit
+        # une autre forme de mapping (ex. chat.schemas.ContextJson sérialisée
+        # avec 'page'), on adapte tolérantement.
+        ctx_kwargs = dict(context_json)
+        if "page" in ctx_kwargs and "page_route" not in ctx_kwargs:
+            ctx_kwargs["page_route"] = ctx_kwargs.pop("page") or "/"
+        # On ne garde que les clés connues du ContextJson agent
+        allowed = {"page_route", "entity_id", "mode", "locale"}
+        ctx_kwargs = {k: v for k, v in ctx_kwargs.items() if k in allowed and v is not None}
+        if "page_route" not in ctx_kwargs:
+            ctx_kwargs["page_route"] = "/"
+        ctx = ContextJson(**ctx_kwargs)
     else:
-        ctx = ContextJson(**context_json)
+        # Pydantic BaseModel (autre que ContextJson) : best effort via model_dump
+        try:
+            payload = context_json.model_dump()  # type: ignore[union-attr]
+            ctx = ContextJson(
+                page_route=payload.get("page_route") or payload.get("page") or "/",
+            )
+        except Exception:  # noqa: BLE001
+            ctx = ContextJson(page_route="/")
 
     # 3. Initialisation state
     initial_state = AgentState(

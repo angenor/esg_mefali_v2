@@ -165,7 +165,26 @@ def post_message(
         )
 
         composite_thread_id = make_thread_id(account_id, conv_id=thread_id)
-        ctx_payload = body.context_json or {"page_route": "/chat"}
+        # F55 — Adapter chat.schemas.ContextJson (page,...) → agent.state.ContextJson
+        # (page_route, entity_id, mode, locale). Le bug pré-existant passait
+        # un objet Pydantic à un constructeur qui attendait un mapping.
+        if body.context_json is not None:
+            chat_ctx = body.context_json.model_dump(exclude_none=True)
+            entity_id_raw = chat_ctx.get("entity_id")
+            ctx_payload: dict[str, Any] = {
+                "page_route": chat_ctx.get("page") or "/chat",
+            }
+            if entity_id_raw:
+                # Validation tolérante : le frontend peut envoyer une string
+                # non-UUID dans certains cas ; on filtre.
+                from uuid import UUID as _UUID
+
+                try:
+                    ctx_payload["entity_id"] = _UUID(entity_id_raw)
+                except (ValueError, TypeError):
+                    pass
+        else:
+            ctx_payload = {"page_route": "/chat"}
 
         async def gen_agent():
             try:

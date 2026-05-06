@@ -86,6 +86,36 @@ async def _lifespan(app_: FastAPI):
         logger.exception("[agent] graph compilation failed")
         app_.state.agent_graph = None
         app_.state.agent_checkpointer = None
+
+    # F55 — Boot fail-fast : enregistrer + valider les handlers de mutation.
+    # Seuls les tools déjà déclarés dans TOOL_REGISTRY sont vérifiés ; le
+    # registre se peuple via les imports du package orchestrator.tools (F15/
+    # F16/F17). En dev, on appelle l'enregistrement explicite pour matérialiser
+    # la chaîne complète.
+    try:
+        from app.agent.handlers import register_mutation_handlers
+        from app.agent.mutation_handlers import ensure_handlers_registered
+        from app.orchestrator.tools import register_response_tools
+        from app.orchestrator.tools.mutations import register_mutation_tools
+
+        # Best-effort : si déjà enregistré, l'erreur de doublon est swallowée.
+        try:
+            register_response_tools()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_response_tools already done")
+        try:
+            register_mutation_tools()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_mutation_tools already done")
+        try:
+            register_mutation_handlers()
+        except Exception:  # noqa: BLE001
+            logger.debug("[agent] register_mutation_handlers already done")
+        ensure_handlers_registered()
+        logger.info("[agent] F55 mutation handlers registered + validated")
+    except Exception:  # noqa: BLE001
+        logger.exception("[agent] F55 handler validation failed")
+
     yield
 
 
