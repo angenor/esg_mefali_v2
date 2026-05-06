@@ -37,6 +37,54 @@ class SseEvent:
         )
 
 
+# F56 — Liste blanche des event_type acceptés par le bridge SSE.
+# Utilisée par l'event_bus_publisher pour valider qu'un event est connu
+# avant émission (les events inconnus sont logés en warning et ignorés).
+KNOWN_EVENTS: frozenset[str] = frozenset(
+    {
+        "token",
+        "text_delta",
+        "tool_call_started",
+        "tool_call_completed",
+        "tool_invoke",
+        "mutation",
+        "validation_retry",
+        "error",
+        "done",
+        "message_done",
+        # F56 NEW
+        "unsourced_claim",
+    }
+)
+
+
+def make_unsourced_claim_event(
+    *,
+    claim: str,
+    reason: str,
+    thread_id: str | None = None,
+    message_id: str | None = None,
+    agent_run_id: str | None = None,
+    span: tuple[int, int] | None = None,
+    unsourced_flag_id: str | None = None,
+    auto: bool = False,
+) -> SseEvent:
+    """F56 — Builder pour l'event ``unsourced_claim`` (FR-005)."""
+    return SseEvent(
+        event_type="unsourced_claim",
+        data={
+            "thread_id": thread_id,
+            "message_id": message_id,
+            "agent_run_id": agent_run_id,
+            "claim": claim,
+            "reason": reason,
+            "span": list(span) if span else None,
+            "unsourced_flag_id": unsourced_flag_id,
+            "auto": auto,
+        },
+    )
+
+
 # --- Builders d'events spécifiques -----------------------------------------
 
 
@@ -288,6 +336,7 @@ def map_dispatch_to_sse(  # noqa: PLR0911 — explicit branches
 
 
 __all__ = [
+    "KNOWN_EVENTS",
     "SseEvent",
     "make_done_event",
     "make_error_event",
@@ -298,6 +347,7 @@ __all__ = [
     "make_tool_call_completed_event",
     "make_tool_call_started_event",
     "make_tool_invoke_event",
+    "make_unsourced_claim_event",
     "make_validation_retry_event",
     "map_dispatch_to_sse",
 ]

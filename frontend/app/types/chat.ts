@@ -39,6 +39,34 @@ export type MessagePayload =
   | { kind: 'sheet_result'; sheetId: string; selection: unknown }
   | { kind: 'error'; code: ChatErrorCode; message: string; retryOf: string }
 
+// -- F56 — Sources de message (FR-011) ----------------------------------
+
+export type SourceVerificationStatus = 'verified' | 'outdated'
+
+export interface SourceRef {
+  source_id: string
+  title: string
+  publisher: string
+  url: string
+  page?: string | null
+  section?: string | null
+  verification_status: SourceVerificationStatus
+  version?: string | null
+  citation_index: number
+  spans?: Array<[number, number]>
+}
+
+export interface UnsourcedClaim {
+  thread_id: string | null
+  message_id: string | null
+  agent_run_id: string | null
+  claim: string
+  reason: string
+  span: [number, number] | null
+  unsourced_flag_id: string | null
+  auto: boolean
+}
+
 export interface ChatMessage {
   id: string
   threadId: string
@@ -49,6 +77,10 @@ export interface ChatMessage {
   sequenceId?: number
   streaming?: boolean
   hasMutation?: boolean
+  // F56 — sources citées agrégées dans ce message
+  sources?: SourceRef[]
+  // F56 — claims non sourcés signalés sur ce message
+  unsourcedClaims?: UnsourcedClaim[]
 }
 
 // -- Streaming ---------------------------------------------------------------
@@ -127,11 +159,27 @@ export interface MemorySnapshot {
 
 export type StreamFrame =
   | { event: 'token'; id?: number; data: { content: string; assistantMessageId?: string } }
-  | { event: 'message_done'; id?: number; data: { messageId: string; payload?: MessagePayload | null; content?: string } }
+  | {
+      event: 'message_done'
+      id?: number
+      data: {
+        messageId: string
+        payload?: MessagePayload | null
+        content?: string
+        // F56 — sources citées dans ce message (FR-011)
+        sources?: SourceRef[]
+        // F56 — état de validation sourçage du run agent
+        sourcing_status?: 'ok' | 'retried_ok' | 'failed' | null
+        // F56 — true si fallback sourçage a tronqué/substitué
+        degraded?: boolean
+      }
+    }
   | { event: 'tool_invoke'; id?: number; data: unknown }
   | { event: 'mutation'; id?: number; data: Omit<EventBusEvent, 'source'> & { source?: EventBusSource } }
   | { event: 'error'; id?: number; data: { code: ChatErrorCode; message: string } }
   | { event: 'memory_updated'; id?: number; data: { threadId: string; size?: number } }
+  // F56 — claim non sourcé signalé (flag_unsourced ou auto-rollup permissif)
+  | { event: 'unsourced_claim'; id?: number; data: UnsourcedClaim }
 
 // -- Send payload ------------------------------------------------------------
 

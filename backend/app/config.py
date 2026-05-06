@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # .env est à la racine du repo (un cran au-dessus de backend/)
@@ -109,6 +109,25 @@ class Settings(BaseSettings):
     LLM_AGENT_CONFIRMATION_TTL_SECONDS: int = Field(default=180, ge=30, le=3600)
     # Header HTTP utilisé par les admins pour activer le mode dry_run (US6).
     LLM_AGENT_DRY_RUN_HEADER: str = Field(default="X-Agent-DryRun", min_length=1)
+
+    # --- F56 (Agent Sourcing Enforcement) ---
+    # Mode du sourçage strict (FR-007). ``off`` interdit en production.
+    LLM_AGENT_SOURCING_MODE: Literal["strict", "permissive", "off"] = "strict"
+    # Environnement de déploiement — utilisé par le validator de
+    # ``LLM_AGENT_SOURCING_MODE`` pour interdire ``off`` en production.
+    ENVIRONMENT: Literal["development", "staging", "production", "test"] = (
+        "development"
+    )
+
+    @model_validator(mode="after")
+    def _enforce_sourcing_mode_in_prod(self) -> Settings:
+        """FR-007 — fail-fast au boot si ``mode='off'`` en production."""
+        if self.ENVIRONMENT == "production" and self.LLM_AGENT_SOURCING_MODE == "off":
+            raise ValueError(
+                "LLM_AGENT_SOURCING_MODE='off' is forbidden when "
+                "ENVIRONMENT='production' (constitutional invariant P1)"
+            )
+        return self
 
     @property
     def database_url(self) -> str:

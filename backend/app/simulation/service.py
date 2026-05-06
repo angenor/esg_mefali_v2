@@ -8,7 +8,7 @@ Coherence : reutilise le pattern F25 (matching/service.py) pour les SQL `text()`
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -474,7 +474,7 @@ def simulate_preview(
             subvention=subvention_pct,
         ),
         formula_refs=[FormulaRef(formula_id="preview.linear", version="1.0")],
-        computed_at=datetime.now(timezone.utc).isoformat(),
+        computed_at=datetime.now(UTC).isoformat(),
     )
 
 

@@ -37,7 +37,7 @@ async def _stream_for_account(account_id) -> AsyncIterator[dict[str, str]]:
                 envelope = await asyncio.wait_for(
                     queue.get(), timeout=_PING_INTERVAL_SECONDS
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield {
                     "event": "ping",
                     "data": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
