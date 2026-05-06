@@ -231,6 +231,19 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 ### Phase G — Notifications & extension panneau
 - **F52** Notifications + Settings + Exports + Extension side panel — UI de F34/F05/F32-export — `done` (specs/052-notifications-settings-extension/) — _Phases 1–10 livrées (US1–US7) ; sidepanel MV3 < 200 kB gzip, mini-chat IA + offres recommandées, push système `chrome.notifications` sur deadline_j_minus_1, suppression compte J+30, audit log F52 testé (test_f52_coverage.py)._
 
+### Phase H — Agent Hardening (cœur produit, 6 features)
+
+L'agent conversationnel **ESG Mefali** décrit dans le Module 1 du brainstorming est le **cœur produit** (l'utilisateur s'adresse à lui par ce nom). Mais l'audit du code révèle que l'infrastructure F13/F14/F15/F16/F17/F18/F19/F21 est livrée comme **bibliothèques isolées** : `chat/llm_stream.py` reste un proxy LLM brut sans tools, sans system prompt, sans contexte, sans mémoire, et l'agent n'a même pas d'identité figée. Cette phase livre le **branchement effectif** + les garde-fous production + l'identité **ESG Mefali** robuste face aux jailbreaks.
+
+| # | Feature | Modules brainstorm | Dépend de |
+|---|---|---|---|
+| 53 | Agent LangGraph Core (graph + branchement `chat/llm_stream.py`) | 1.0–1.4, 10.1–10.5, 11.1 | 13, 14, 18, 19, 21 |
+| 54 | Context Builder & System Prompt dynamique (PME + page + skills + tools) | 1.4, 10.3, 0.7 | 11, 12, 18, 19, 53 |
+| 55 | Tool Dispatch & SSE Bridge (mutations + bottom sheet + viz + audit) | 1.1.1, 1.1.2, 1.1.3, 10.1 | 15, 16, 17, 39, 40, 41, 53 |
+| 56 | Sourçage cite_source enforcement (P1 strict + bandeau non sourcé) | 0.1, 10.4 | 03, 07, 35, 53, 55 |
+| 57 | Agent Memory & Long-term Recall (LangGraph node + pgvector RAG + compaction) | 1.4, 11.5 | 18, 53, 54 |
+| 58 | Agent Guardrails & Eval (anti-injection, PII, kill-switch, eval continue) | 10.4, 10.6, 10.7, 10.8, 0.3 | 35, 53, 55, 56 |
+
 ### Sprint UI recommandé
 
 - **Sprint UI-1 (Fondations)** : 36 → 37 → 38
@@ -240,8 +253,9 @@ Le backend des features 01-35 livre l'API mais **le frontend Nuxt est resté vol
 - **Sprint UI-5 (Documents & rapports)** : 49 → 50
 - **Sprint UI-6 (Financement & flux complexes)** : 51
 - **Sprint UI-7 (Périphérie)** : 52
+- **Sprint Agent (cœur produit)** : 53 → 54 → 55 → 56 → (57 ‖ 58)
 
-**Important** : F36–F38 sont **bloquantes** pour tout le reste. Ne pas les paralléliser avec F39+. Les phases D–G peuvent être largement parallélisées une fois la phase B livrée.
+**Important** : F36–F38 sont **bloquantes** pour tout le reste. Ne pas les paralléliser avec F39+. Les phases D–G peuvent être largement parallélisées une fois la phase B livrée. La **Phase H (Agent Hardening, F53-F58)** transforme le chat actuel (proxy LLM) en agent réel — F53 d'abord, le reste séquentiel mais F57 et F58 parallélisables une fois F56 livré.
 
 ---
 

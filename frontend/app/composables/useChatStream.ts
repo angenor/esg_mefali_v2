@@ -67,17 +67,66 @@ function parseFrame(raw: string): ParsedFrame | null {
 }
 
 function toStreamFrame(parsed: ParsedFrame): StreamFrame | null {
-  const allowed = new Set([
-    'token', 'message_done', 'tool_invoke', 'mutation', 'error', 'memory_updated',
+  // Backend (cf. backend/app/chat/llm_stream.py + sse-envelope.schema.json) émet :
+  //   text_delta {delta}, message_done {message_id}, error {code, detail},
+  //   tool_call_started, tool_call_completed, entity_updated.
+  // Frontend StreamFrame utilise des conventions camelCase. On normalise ici.
+  const allowedBackend = new Set([
+    'text_delta', 'message_done', 'error', 'entity_updated',
+    'tool_call_started', 'tool_call_completed',
+    // Conventions historiques préservées (fallback) :
+    'token', 'tool_invoke', 'mutation', 'memory_updated',
   ])
-  if (!allowed.has(parsed.event)) return null
-  let data: unknown
+  if (!allowedBackend.has(parsed.event)) return null
+  let raw: Record<string, unknown> = {}
   try {
-    data = parsed.data ? JSON.parse(parsed.data) : {}
+    raw = parsed.data ? (JSON.parse(parsed.data) as Record<string, unknown>) : {}
   } catch {
     return null
   }
-  return { event: parsed.event as StreamFrame['event'], id: parsed.id, data: data as never } as StreamFrame
+
+  switch (parsed.event) {
+    case 'text_delta':
+    case 'token': {
+      const content = (raw.delta as string | undefined) ?? (raw.content as string | undefined) ?? ''
+      return { event: 'token', id: parsed.id, data: { content } } as StreamFrame
+    }
+    case 'message_done': {
+      const messageId = (raw.message_id as string | undefined) ?? (raw.messageId as string | undefined) ?? ''
+      // Backend ne renvoie pas systématiquement `content` (cf. llm_stream.py).
+      // Laisser undefined permet au store d'utiliser partialContent accumulé.
+      const content = raw.content as string | undefined
+      const payload = (raw.payload as never) ?? null
+      const data: { messageId: string; content?: string; payload: never } = { messageId, payload }
+      if (content !== undefined) data.content = content
+      return { event: 'message_done', id: parsed.id, data } as StreamFrame
+    }
+    case 'error': {
+      const code = (raw.code as string | undefined) ?? 'unknown'
+      const message = (raw.message as string | undefined) ?? (raw.detail as string | undefined) ?? 'Erreur'
+      return { event: 'error', id: parsed.id, data: { code: code as never, message } } as StreamFrame
+    }
+    case 'entity_updated':
+    case 'mutation': {
+      return { event: 'mutation', id: parsed.id, data: raw as never } as StreamFrame
+    }
+    case 'tool_call_started':
+    case 'tool_invoke': {
+      return { event: 'tool_invoke', id: parsed.id, data: raw as never } as StreamFrame
+    }
+    case 'tool_call_completed':
+    case 'memory_updated': {
+      return { event: 'memory_updated', id: parsed.id, data: raw as never } as StreamFrame
+    }
+    default:
+      return null
+  }
+}
+
+function csrfHeaderForStream(): Record<string, string> {
+  if (typeof document === 'undefined') return {}
+  const m = document.cookie.match(/(?:^|;\s*)mefali_csrf=([^;]+)/)
+  return m ? { 'X-CSRF-Token': decodeURIComponent(m[1]!) } : {}
 }
 
 export interface ChatStreamController {
@@ -113,6 +162,7 @@ export function useChatStream(
     const headers: Record<string, string> = {
       'content-type': 'application/json',
       accept: 'text/event-stream',
+      ...csrfHeaderForStream(),
     }
     if (options.authHeader) headers.authorization = options.authHeader
 

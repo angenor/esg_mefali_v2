@@ -20,11 +20,54 @@ import type {
 import { useChatStream } from '~/composables/useChatStream'
 import { useChatEventBus } from '~/composables/useChatEventBus'
 
+interface ApiThreadRow {
+  id: string
+  title: string
+  archived: boolean
+  created_at: string
+  updated_at: string
+}
+interface ApiMessageRow {
+  id: string
+  thread_id: string
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  content: string
+  payload_json: MessagePayload | null
+  context_json?: Record<string, unknown> | null
+  created_at: string
+}
 interface ApiThreadList {
-  items: ChatThreadSummary[]
+  threads: ApiThreadRow[]
 }
 interface ApiMessageList {
-  items: ChatMessage[]
+  messages: ApiMessageRow[]
+}
+
+function mapThread(row: ApiThreadRow): ChatThreadSummary {
+  return {
+    id: row.id,
+    title: row.title,
+    archived: row.archived,
+    createdAt: row.created_at,
+    lastMessageAt: row.updated_at,
+  }
+}
+
+function mapMessage(row: ApiMessageRow): ChatMessage {
+  return {
+    id: row.id,
+    threadId: row.thread_id,
+    role: row.role === 'tool' ? 'system' : row.role,
+    content: row.content,
+    payload: row.payload_json ?? null,
+    createdAt: row.created_at,
+  }
+}
+
+function csrfHeader(): Record<string, string> {
+  if (typeof document === 'undefined') return {}
+  const m = document.cookie.match(/(?:^|;\s*)mefali_csrf=([^;]+)/)
+  return m ? { 'X-CSRF-Token': decodeURIComponent(m[1]!) } : {}
 }
 
 interface ChatState {
@@ -87,7 +130,7 @@ export const useChatStore = defineStore('chat', {
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = (await res.json()) as ApiThreadList
-        this.threads = data.items ?? []
+        this.threads = (data.threads ?? []).map(mapThread)
         this.loaded = true
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -112,7 +155,8 @@ export const useChatStore = defineStore('chat', {
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = (await res.json()) as ApiMessageList
-        this.messagesByThread = { ...this.messagesByThread, [threadId]: data.items ?? [] }
+        const items = (data.messages ?? []).map(mapMessage)
+        this.messagesByThread = { ...this.messagesByThread, [threadId]: items }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn('[chat] loadMessages failed', err)
@@ -125,11 +169,16 @@ export const useChatStore = defineStore('chat', {
         const res = await fetch(`${apiBase()}/me/chat/threads`, {
           method: 'POST',
           credentials: 'include',
-          headers: { 'content-type': 'application/json', accept: 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json',
+            ...csrfHeader(),
+          },
           body: JSON.stringify({ title: 'Nouveau chat' }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const thread = (await res.json()) as ChatThreadSummary
+        const raw = (await res.json()) as ApiThreadRow
+        const thread = mapThread(raw)
         this.threads = [thread, ...this.threads]
         this.messagesByThread = { ...this.messagesByThread, [thread.id]: [] }
         this.currentThreadId = thread.id
@@ -213,10 +262,16 @@ export const useChatStore = defineStore('chat', {
         ctx.force_freetext = true
         this.clearForceFreetext()
       }
+      // ContextJson backend exige extra='forbid' et ne tolère que page/entity_type/
+      // entity_id/selection. On ne propage que les champs whitelistés.
+      const safeCtx: Record<string, unknown> = {}
+      for (const k of ['page', 'entity_type', 'entity_id', 'selection'] as const) {
+        if (ctx[k] !== undefined) safeCtx[k] = ctx[k]
+      }
       const body: SendMessageBody = {
         content,
-        context_json: Object.keys(ctx).length > 0 ? ctx : undefined,
-        payload_json: opts.payload,
+        context_json: safeCtx,
+        payload_json: opts.payload as Record<string, unknown> | null | undefined,
       }
 
       const ac = new AbortController()
