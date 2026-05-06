@@ -66,6 +66,7 @@ function onKeyDown(e: KeyboardEvent): void {
       placeholder="Écrivez votre message…"
       aria-label="Message à l'assistant"
       class="chat-input__field"
+      data-testid="chat-input"
       @keydown="onKeyDown"
     />
     <button
@@ -73,6 +74,7 @@ function onKeyDown(e: KeyboardEvent): void {
       class="chat-input__send"
       :disabled="!canSend"
       aria-label="Envoyer le message"
+      data-testid="chat-send"
       @click="send"
     >
       <span aria-hidden="true">➤</span>

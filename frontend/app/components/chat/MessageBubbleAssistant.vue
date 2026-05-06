@@ -89,7 +89,12 @@ const errorMessage = computed(() => {
 </script>
 
 <template>
-  <div class="chat-bubble-assistant" role="listitem" :class="{ 'chat-bubble-assistant--wide': isViz }">
+  <div
+    class="chat-bubble-assistant"
+    role="listitem"
+    :class="{ 'chat-bubble-assistant--wide': isViz }"
+    :data-testid="`message-bubble-assistant${messageId ? `-${messageId}` : ''}`"
+  >
     <div class="chat-bubble-assistant__bubble">
       <template v-if="isError">
         <MessageError

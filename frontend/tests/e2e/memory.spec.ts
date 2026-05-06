@@ -3,105 +3,42 @@
  *
  * Scénario (couvre SC-003 + SC-004) :
  *   1. Inscription dynamique d'un utilisateur PME.
- *   2. Récupération du token JWT via /auth/login (cookie ou body).
+ *   2. Login + récupération du cookie CSRF via le helper partagé.
  *   3. Création d'un thread + insertion de messages via API.
  *   4. GET /me/chat/threads/{id}/memory → vérifier shape `MemorySnapshotV2`.
  *   5. DELETE /me/chat/threads/{id}/memory → 200 idempotent.
  *   6. Re-GET → vérifier `vector_index_size=0` + `summary=null`.
- *
- * QUARANTINE (auth_ssr_csrf) — même root cause que F53/F54/F55/F56.
- * Le middleware CSRF (F02 AuthSessionMiddleware) bloque les POST/DELETE
- * direct API sans cookie mefali_csrf côté Playwright request context.
- * La couverture fonctionnelle de ces scénarios est assurée par les tests
- * backend intégration (134 tests, coverage 88.5 %).
- *
- * Débloquer quand : le middleware CSRF expose un mode Bearer-token bypass
- * ou quand un helper E2E CSRF-aware est disponible (cf. Issue #auth-ssr).
  */
 
-import { test, expect, type APIResponse } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
-// NOTE: E2E_API_BASE=http://localhost:8011 si backend port 8010 est une
-// instance pré-F57 (sans le router memory chargé).
-const API_BASE = process.env.E2E_API_BASE || 'http://localhost:8011'
+import { registerLoginCsrf } from './helpers/auth'
 
-async function safeRegister(
-  request: APIResponse['request'] | any,
-): Promise<{ email: string; password: string }> {
-  const email = `e2e_f57_memory_${Date.now()}@example.com`
-  const password = 'Mefali2026!Memory'
-  await request.post(`${API_BASE}/auth/register`, {
-    data: {
-      email,
-      password,
-      raison_sociale: 'PME E2E Memory',
-      secteur: 'agro',
-    },
-  })
-  return { email, password }
-}
-
-async function loginAndGetToken(
-  request: any,
-  email: string,
-  password: string,
-): Promise<string | null> {
-  const r = await request.post(`${API_BASE}/auth/login`, {
-    data: { email, password },
-  })
-  if (r.status() !== 200) return null
-  // Cookie auth or body token; we accept whichever works.
-  try {
-    const body = await r.json()
-    if (body?.access_token) return String(body.access_token)
-  } catch {
-    /* cookie auth — leave context cookies in place */
-  }
-  return null
-}
+const API_BASE = process.env.E2E_API_BASE || 'http://localhost:8010'
 
 test.describe('F57 — memory endpoint (GET + DELETE)', () => {
   test('GET memory returns MemorySnapshotV2 shape; DELETE purges', async ({
     request,
   }) => {
-    // QUARANTINE : bug auth_ssr_csrf pré-existant (F53/F54/F55/F56).
-    // POST /me/chat/threads est bloqué par CSRF sans cookie mefali_csrf.
-    // Couverture assurée par backend integration tests (134 tests, 88.5%).
-    test.fixme(
-      true,
-      'auth_ssr_csrf: POST mutants bloqués par CSRF middleware sans cookie (F53/F54/F55/F56 pattern)',
-    )
+    // 1. Register + login + CSRF
+    const { headers } = await registerLoginCsrf(request, { apiBase: API_BASE })
 
-    // 1. Register
-    const { email, password } = await safeRegister(request)
-
-    // 2. Login (cookie or token)
-    const token = await loginAndGetToken(request, email, password)
-    const headers: Record<string, string> = {}
-    if (token) headers.Authorization = `Bearer ${token}`
-
-    // 3. Create thread
+    // 2. Create thread (CSRF header attendu par AuthSessionMiddleware)
     const threadResp = await request.post(`${API_BASE}/me/chat/threads`, {
       headers,
       data: { title: 'F57 E2E memory' },
     })
-    if (![200, 201].includes(threadResp.status())) {
-      test.skip(true, `Create thread failed (${threadResp.status()})`)
-      return
-    }
+    expect(threadResp.status(), `thread create body: ${await threadResp.text()}`).toBeLessThan(400)
     const thread = await threadResp.json()
     const threadId = thread?.id || thread?.thread_id
-    if (!threadId) {
-      test.skip(true, 'Thread id missing in response')
-      return
-    }
+    expect(threadId, `thread payload: ${JSON.stringify(thread)}`).toBeTruthy()
 
     // 4. GET memory snapshot
     const getResp = await request.get(
       `${API_BASE}/me/chat/threads/${threadId}/memory`,
       { headers },
     )
-    expect(getResp.status()).toBe(200)
+    expect(getResp.status(), `memory body: ${await getResp.text()}`).toBe(200)
     const snap = await getResp.json()
     // Vérifier la shape MemorySnapshotV2 (FR-007)
     expect(snap).toHaveProperty('total_messages')
@@ -148,45 +85,37 @@ test.describe('F57 — memory endpoint (GET + DELETE)', () => {
     expect(snap2.last_compaction_at).toBeNull()
   })
 
-  test('GET memory cross-tenant returns 404', async ({ request }) => {
-    // QUARANTINE : même root cause auth_ssr_csrf — POST thread creation bloqué.
-    test.fixme(
-      true,
-      'auth_ssr_csrf: POST mutants bloqués par CSRF middleware sans cookie (F53/F54/F55/F56 pattern)',
-    )
+  test('GET memory cross-tenant returns 404', async ({ browser }) => {
+    // Two distinct browser contexts ⇒ deux sessions cookies indépendantes
+    // (même process Playwright). Évite le conflit de session sur le seul
+    // `request` partagé du test.
+    const ctxB = await browser.newContext()
+    const reqB = ctxB.request
+    const { headers: headersB } = await registerLoginCsrf(reqB, { apiBase: API_BASE })
 
-    // Create user A
-    const a = await safeRegister(request)
-    await loginAndGetToken(request, a.email, a.password)
-
-    // Create user B
-    const b = await safeRegister(request)
-    const tokenB = await loginAndGetToken(request, b.email, b.password)
-    const headersB: Record<string, string> = {}
-    if (tokenB) headersB.Authorization = `Bearer ${tokenB}`
-
-    // User B creates a thread.
-    const threadResp = await request.post(`${API_BASE}/me/chat/threads`, {
+    const threadResp = await reqB.post(`${API_BASE}/me/chat/threads`, {
       headers: headersB,
       data: { title: 'B private' },
     })
     if (![200, 201].includes(threadResp.status())) {
+      await ctxB.close()
       test.skip(true, 'thread create failed')
       return
     }
     const thread = await threadResp.json()
     const threadId = thread?.id || thread?.thread_id
+    await ctxB.close()
 
-    // Switch back to user A — login again.
-    const tokenA = await loginAndGetToken(request, a.email, a.password)
-    const headersA: Record<string, string> = {}
-    if (tokenA) headersA.Authorization = `Bearer ${tokenA}`
+    // Now A queries B's thread — distinct context, distinct session.
+    const ctxA = await browser.newContext()
+    const reqA = ctxA.request
+    const { headers: headersA } = await registerLoginCsrf(reqA, { apiBase: API_BASE })
 
-    // A queries B's thread → 404.
-    const r = await request.get(
+    const r = await reqA.get(
       `${API_BASE}/me/chat/threads/${threadId}/memory`,
       { headers: headersA },
     )
     expect([404, 401, 403]).toContain(r.status())
+    await ctxA.close()
   })
 })

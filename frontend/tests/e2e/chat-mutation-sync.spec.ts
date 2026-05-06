@@ -12,40 +12,11 @@
  *    synchronisé sans rechargement utilisateur (EventBus → store refresh).
  */
 
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
-const API_BASE = 'http://localhost:8010'
+import { loginViaUI, registerLoginCsrf } from './helpers/auth'
 
-async function ensureTestUser(request: Page['request']): Promise<{
-  email: string
-  password: string
-}> {
-  const email = `e2e_f55_mut_${Date.now()}@example.com`
-  const password = 'Mefali2026!Test'
-  await request.post(`${API_BASE}/auth/register`, {
-    data: {
-      email,
-      password,
-      raison_sociale: 'PME F55 Mutation Test',
-      secteur: 'agro',
-    },
-  })
-  return { email, password }
-}
-
-async function loginViaUI(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/login')
-  await page.waitForLoadState('networkidle', { timeout: 15_000 })
-  const emailInput = page.locator('#login-email')
-  const pwdInput = page.locator('#login-pwd')
-  await emailInput.waitFor({ state: 'visible', timeout: 8_000 })
-  await emailInput.click()
-  await emailInput.type(email, { delay: 30 })
-  await pwdInput.click()
-  await pwdInput.type(password, { delay: 30 })
-  await page.click('button[type="submit"]')
-  await page.waitForURL(/\/(dashboard|onboarding|chat)/, { timeout: 12_000 })
-}
+const API_BASE = process.env.E2E_API_BASE || 'http://localhost:8010'
 
 test.describe('F55 US1 — Mutation LLM avec sync front', () => {
   test('update_company_profile via chat reflects in /profile/entreprise', async ({
@@ -53,24 +24,23 @@ test.describe('F55 US1 — Mutation LLM avec sync front', () => {
     context,
     request,
   }) => {
-    // QUARANTINE: Bug pré-existant auth SSR Nuxt (identifié F54, ticket #SSR-AUTH).
-    // Le frontend SSE (notifications/stream) maintient des connexions réseau permanentes
-    // qui empêchent 'networkidle' d'être atteint après navigation post-login vers /chat.
-    // La page se charge correctement mais waitForLoadState('networkidle') timeout.
-    // Hors scope F55 — ne pas corriger ici.
-    test.fixme(true, 'Bug pré-existant auth SSR Nuxt: SSE keepalive empêche networkidle — Issue #SSR-AUTH (identifié F54)')
+    // Requires backend skill seeding for ``update_company_profile`` trigger.
+    // Auth/CSRF + chat input/SSE chain are now functional (see /helpers/auth
+    // and added testids in MessageBubbleAssistant/MessageError/MessageInput).
+    test.fixme(
+      true,
+      'Requires backend skill seeding for update_company_profile trigger.',
+    )
 
-    const { email, password } = await ensureTestUser(request)
+    const { email, password } = await registerLoginCsrf(request, { apiBase: API_BASE })
     await loginViaUI(page, email, password)
 
     // Onglet 1 : profile
     const profilePage = await context.newPage()
     await profilePage.goto('/profile/entreprise')
-    await profilePage.waitForLoadState('networkidle', { timeout: 15_000 })
 
     // Onglet 2 : chat
     await page.goto('/chat')
-    await page.waitForLoadState('networkidle', { timeout: 15_000 })
 
     // Envoyer un message qui force update_company_profile
     await page.fill(

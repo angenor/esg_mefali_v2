@@ -13,59 +13,29 @@
  * 7. Vérifier que le tour suivant s'enchaîne correctement
  */
 
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 
-const API_BASE = 'http://localhost:8010'
+import { loginViaUI, registerLoginCsrf } from './helpers/auth'
 
-async function ensureTestUser(request: Page['request']): Promise<{
-  email: string
-  password: string
-}> {
-  const email = `e2e_f55_sheet_${Date.now()}@example.com`
-  const password = 'Mefali2026!Test'
-  await request.post(`${API_BASE}/auth/register`, {
-    data: {
-      email,
-      password,
-      raison_sociale: 'PME F55 BottomSheet Test',
-      secteur: 'agro',
-    },
-  })
-  return { email, password }
-}
-
-async function loginViaUI(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/login')
-  await page.waitForLoadState('networkidle', { timeout: 15_000 })
-  const emailInput = page.locator('#login-email')
-  const pwdInput = page.locator('#login-pwd')
-  await emailInput.waitFor({ state: 'visible', timeout: 8_000 })
-  await emailInput.click()
-  await emailInput.type(email, { delay: 30 })
-  await pwdInput.click()
-  await pwdInput.type(password, { delay: 30 })
-  await page.click('button[type="submit"]')
-  await page.waitForURL(/\/(dashboard|onboarding|chat)/, { timeout: 12_000 })
-}
+const API_BASE = process.env.E2E_API_BASE || 'http://localhost:8010'
 
 test.describe('F55 US2 — Bottom sheet ASK flow', () => {
   test('ask_qcu opens bottom sheet (P10), bubble stays display-only', async ({
     page,
     request,
   }) => {
-    // QUARANTINE: Bug pré-existant auth SSR Nuxt (identifié F54, ticket #SSR-AUTH).
-    // Le frontend SSE (notifications/stream) maintient des connexions réseau permanentes
-    // qui empêchent 'networkidle' d'être atteint après navigation post-login.
-    // La page se charge correctement (screenshot confirme l'UI chat chargée),
-    // mais waitForLoadState('networkidle') timeout systématiquement.
-    // Hors scope F55 — ne pas corriger ici.
-    test.fixme(true, 'Bug pré-existant auth SSR Nuxt: SSE keepalive empêche networkidle — Issue #SSR-AUTH (identifié F54)')
+    // Necessary backend skill (ask_qcu trigger) is not seeded in dev. Keep
+    // quarantined until a deterministic forme-juridique skill ships, OR until
+    // we can assert via SSE intercept rather than UI bottom sheet rendering.
+    test.fixme(
+      true,
+      'Requires backend skill seeding for ask_qcu trigger ; see /skills/ task',
+    )
 
-    const { email, password } = await ensureTestUser(request)
+    const { email, password } = await registerLoginCsrf(request, { apiBase: API_BASE })
     await loginViaUI(page, email, password)
 
     await page.goto('/chat')
-    await page.waitForLoadState('networkidle', { timeout: 15_000 })
 
     // Envoyer un message qui force ask_qcu (configuration backend nécessaire
     // côté seeds — fallback : intercepter SSE)
@@ -99,16 +69,16 @@ test.describe('F55 US2 — Bottom sheet ASK flow', () => {
     page,
     request,
   }) => {
-    // QUARANTINE: Bug pré-existant auth SSR Nuxt (identifié F54, ticket #SSR-AUTH).
-    // Même cause que le test précédent : SSE keepalive empêche networkidle.
-    // Hors scope F55 — ne pas corriger ici.
-    test.fixme(true, 'Bug pré-existant auth SSR Nuxt: SSE keepalive empêche networkidle — Issue #SSR-AUTH (identifié F54)')
+    // Same skill seeding gap as previous test ; ask_qcu trigger isn't seeded.
+    test.fixme(
+      true,
+      'Requires backend skill seeding for ask_qcu trigger ; see /skills/ task',
+    )
 
-    const { email, password } = await ensureTestUser(request)
+    const { email, password } = await registerLoginCsrf(request, { apiBase: API_BASE })
     await loginViaUI(page, email, password)
 
     await page.goto('/chat')
-    await page.waitForLoadState('networkidle', { timeout: 15_000 })
 
     await page.fill('[data-testid="chat-input"]', 'Donne-moi une question fermée')
     await page.click('[data-testid="chat-send"]')

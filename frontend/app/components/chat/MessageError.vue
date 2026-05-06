@@ -30,7 +30,7 @@ const canRetry = computed(() => props.code !== 'forbidden' && props.code !== 'va
 </script>
 
 <template>
-  <div class="chat-error" role="alert">
+  <div class="chat-error" role="alert" data-testid="message-error">
     <div class="chat-error__inner">
       <span class="chat-error__icon" aria-hidden="true">!</span>
       <span class="chat-error__msg">{{ text }}</span>
