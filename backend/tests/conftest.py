@@ -70,6 +70,7 @@ def pytest_configure(config):
     try:
         from pydantic import BaseModel, ConfigDict
 
+        from app.agent.state import ToolCategory
         from app.orchestrator.tool_registry import TOOL_REGISTRY, tool
 
         if "respond_user" not in TOOL_REGISTRY:
@@ -77,12 +78,16 @@ def pytest_configure(config):
                 model_config = ConfigDict(extra="forbid")
                 text: str = ""
 
+            # category=READ : pas de mutation DB → pas besoin de handler
+            # ``MUTATION_HANDLERS`` au boot (évite ``HandlerRegistrationError``
+            # logué en ERROR au lifespan).
             tool(
                 name="respond_user",
                 description="Réponse texte simple",
                 use_when="Aucun tool structuré n'est nécessaire",
                 dont_use_when="Une mutation/visu est attendue",
                 schema=_RespondUserPayload,
+                category=ToolCategory.READ,
             )
     except Exception:  # noqa: BLE001 - never break tests collection
         pass
