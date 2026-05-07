@@ -67,7 +67,18 @@ onBeforeUnmount(() => {
       data-testid="avatar-button"
       @click="toggle"
     >
-      {{ initials }}
+      <!--
+        L'identité ``auth.user`` n'est disponible qu'après hydratation
+        client (cookies httpOnly inaccessibles côté SSR). On force le
+        rendu côté client uniquement pour éviter le hydration mismatch
+        ('·' en SSR vs initiales en CSR).
+      -->
+      <ClientOnly>
+        <template #fallback>
+          <span aria-hidden="true">·</span>
+        </template>
+        {{ initials }}
+      </ClientOnly>
     </button>
 
     <div

@@ -1,16 +1,14 @@
 <script setup lang="ts">
-// F42 T051 — Layout auth split-screen avec preload illustration
+// F42 T051 — Layout auth split-screen
+//
+// Note : les preload `/img/auth-illustration.{avif,webp}` ont été retirés
+// car les fichiers ne sont pas (encore) dans `public/`. Garder un
+// `<link rel="preload">` mort produit un 404 à chaque navigation et
+// pollue les DevTools. Re-introduire si/quand les illustrations sont
+// fournies par le design.
 import { useT } from "~/composables/useT"
 
 const { t } = useT()
-
-useHead({
-  link: [
-    // Preload des illustrations optimisées (placeholder fournis par design)
-    { rel: "preload", as: "image", href: "/img/auth-illustration.avif", type: "image/avif" },
-    { rel: "preload", as: "image", href: "/img/auth-illustration.webp", type: "image/webp" },
-  ],
-})
 </script>
 
 <template>
