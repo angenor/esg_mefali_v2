@@ -18,7 +18,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any
 from uuid import UUID
@@ -42,6 +42,22 @@ class TraceContext:
     total_tokens_in: int = 0
     total_tokens_out: int = 0
     total_tool_calls: int = 0
+    last_node_name: str | None = None
+
+
+@dataclass
+class StepCounters:
+    """Compteurs setables par le caller dans le bloc ``async with traced_node``.
+
+    Permettent au wrapper de propager les tokens consommés par le nœud (ex.
+    ``call_llm`` lisant ``ai_response.usage_metadata``) vers le step et
+    l'agrégat final.
+    """
+
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    tool_calls_count: int = 0
+    extras: dict[str, Any] = field(default_factory=dict)
 
 
 def _should_write_db(mode: str) -> bool:
@@ -61,19 +77,21 @@ async def traced_node(
     """Mesure la latence d'un bloc et écrit un ``agent_run_step``.
 
     Usage :
-        async with traced_node(ctx, node_name="route"):
-            ... # exécution du nœud
+        async with traced_node(ctx, node_name="route") as counters:
+            result = await node_fn(state)
+            counters.tokens_in = ...  # optionnel
+            counters.tokens_out = ...
+            counters.tool_calls_count = ...
 
-    Si ctx.run_id est None ou ctx.session est None, l'écriture DB est skippée.
+    Si ``ctx.run_id`` est None ou ``ctx.session`` est None, l'écriture DB
+    est skippée mais la mesure de latence reste effectuée.
     """
+    counters = StepCounters()
     start = time.perf_counter()
     status = "ok"
     error: str | None = None
-    tokens_in: int | None = None
-    tokens_out: int | None = None
-    tool_calls_count = 0
     try:
-        yield ctx
+        yield counters
     except TimeoutError as exc:
         status = "timeout"
         error = str(exc)
@@ -84,6 +102,14 @@ async def traced_node(
         raise
     finally:
         latency_ms = int((time.perf_counter() - start) * 1000)
+        # Agrégation dans le TraceContext (utilisée par le runner pour
+        # complete_run avec total_tokens_in/out).
+        if counters.tokens_in:
+            ctx.total_tokens_in += int(counters.tokens_in)
+        if counters.tokens_out:
+            ctx.total_tokens_out += int(counters.tokens_out)
+        ctx.total_tool_calls += int(counters.tool_calls_count)
+        ctx.last_node_name = node_name
         if (
             ctx.run_id is not None
             and ctx.session is not None
@@ -96,9 +122,9 @@ async def traced_node(
                     account_id=ctx.account_id,
                     node_name=node_name,
                     latency_ms=latency_ms,
-                    tokens_in=tokens_in,
-                    tokens_out=tokens_out,
-                    tool_calls_count=tool_calls_count,
+                    tokens_in=counters.tokens_in,
+                    tokens_out=counters.tokens_out,
+                    tool_calls_count=counters.tool_calls_count,
                     status=status,
                     error=error,
                 )
@@ -113,6 +139,8 @@ async def traced_node(
                         "latency_ms": latency_ms,
                         "status": status,
                         "error": error,
+                        "tokens_in": counters.tokens_in,
+                        "tokens_out": counters.tokens_out,
                     }
                 )
             )
@@ -141,6 +169,7 @@ def get_trace_mode() -> str:
 
 
 __all__ = [
+    "StepCounters",
     "TraceContext",
     "get_trace_mode",
     "traced_node",
