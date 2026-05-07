@@ -21,12 +21,24 @@ Edges conditionnels :
 - ``validate_payload → compose_response`` si max retries dépassés
 - ``dispatch_tool → call_llm`` si REINVOKE_LLM exécuté ET reinvoke_count < MAX
 - ``dispatch_tool → compose_response`` sinon
+
+Tracing (F53/T072 + post-PR43 fix) :
+
+Chaque nœud est enveloppé par :func:`_make_traced_node` qui ouvre une
+session ``migrator`` (BYPASSRLS) le temps du nœud, mesure la latence,
+extrait les ``usage_metadata`` éventuelles d'un ``AIMessage`` retourné par
+``call_llm`` et écrit un row ``agent_run_step``. Le wrapping est
+inactif (no-op) si ``state.agent_run_id`` est ``None`` (cas test sans
+runner) ou si ``LLM_AGENT_TRACE='off'``.
 """
 
 from __future__ import annotations
 
+import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.nodes.build_context import NODE_NAME as N_BUILD
@@ -50,7 +62,10 @@ from app.agent.nodes.validate_payload import (
     node_validate_payload,
 )
 from app.agent.state import AgentState, DispatchCategory
+from app.agent.tracing import TraceContext, get_trace_mode, traced_node
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 # Plafond anti-boucle infinie sur REINVOKE_LLM (FR Edge cases)
 _MAX_REINVOKE = 3
@@ -148,22 +163,126 @@ def _route_after_compose(state: AgentState) -> str:
     return END
 
 
+_NodeFn = Callable[[AgentState], Awaitable[dict[str, Any]]]
+
+
+def _extract_usage_from_patch(patch: Any) -> tuple[int | None, int | None]:
+    """Récupère les ``input_tokens``/``output_tokens`` d'un patch de nœud.
+
+    Le ``call_llm`` retourne un patch ``{"messages": [AIMessage]}``. Si
+    l'``AIMessage`` expose ``usage_metadata`` (LangChain >= 0.2), on en tire
+    les compteurs pour les écrire dans ``agent_run_step``.
+    """
+    if not isinstance(patch, dict):
+        return None, None
+    messages = patch.get("messages") or []
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+    for msg in messages:
+        if not isinstance(msg, AIMessage):
+            continue
+        usage = getattr(msg, "usage_metadata", None)
+        if not usage:
+            continue
+        ti = usage.get("input_tokens") if isinstance(usage, dict) else None
+        to = usage.get("output_tokens") if isinstance(usage, dict) else None
+        if ti is not None:
+            tokens_in = (tokens_in or 0) + int(ti)
+        if to is not None:
+            tokens_out = (tokens_out or 0) + int(to)
+    return tokens_in, tokens_out
+
+
+def _open_trace_session():
+    """Ouvre une session SQLAlchemy bind sur l'engine migrator (BYPASSRLS)."""
+    from sqlalchemy.orm import Session
+
+    from app.db import get_engine_migrator
+
+    return Session(bind=get_engine_migrator())
+
+
+def _make_traced_node(node_fn: _NodeFn, node_name: str) -> _NodeFn:
+    """Enveloppe ``node_fn`` avec ``traced_node`` pour persister un step.
+
+    No-op si ``state.agent_run_id is None`` ou si le mode tracing est
+    ``off``. Toute exception levée par ``node_fn`` est propagée intacte
+    au graph (pour préserver les chemins ``except`` du runner) ; le step
+    est néanmoins enregistré avec ``status='error'`` via ``traced_node``.
+    """
+
+    async def _wrapped(state: AgentState) -> dict[str, Any]:
+        run_id = getattr(state, "agent_run_id", None)
+        trace_mode = get_trace_mode()
+
+        # Fast path : pas de tracing → exécution directe.
+        if run_id is None or trace_mode == "off":
+            return await node_fn(state)
+
+        trace_session = None
+        try:
+            trace_session = _open_trace_session()
+            # Purge défensive (pool peut retourner une connection sale).
+            trace_session.rollback()
+            ctx = TraceContext(
+                run_id=run_id,
+                account_id=state.account_id,
+                session=trace_session,
+                trace_mode=trace_mode,
+            )
+            async with traced_node(ctx, node_name=node_name) as counters:
+                result = await node_fn(state)
+                # Capture tokens si le patch contient un AIMessage avec
+                # usage_metadata (cas typique : ``call_llm``).
+                ti, to = _extract_usage_from_patch(result)
+                if ti is not None:
+                    counters.tokens_in = ti
+                if to is not None:
+                    counters.tokens_out = to
+                # Compte les tool_calls éventuels présents dans le patch.
+                if isinstance(result, dict) and isinstance(
+                    result.get("tool_calls"), list
+                ):
+                    counters.tool_calls_count = len(result["tool_calls"])
+            trace_session.commit()
+            return result
+        except Exception:
+            # ``traced_node`` a déjà loggé le step en status='error' avant
+            # de re-raise via le finally.
+            if trace_session is not None:
+                try:
+                    trace_session.commit()
+                except Exception:  # noqa: BLE001
+                    trace_session.rollback()
+            raise
+        finally:
+            if trace_session is not None:
+                try:
+                    trace_session.close()
+                except Exception:  # noqa: BLE001
+                    pass
+
+    _wrapped.__name__ = f"traced_{node_name}"
+    return _wrapped
+
+
 def build_graph() -> StateGraph:
     """Assemble le ``StateGraph[AgentState]`` (non compilé).
 
     Le compileur ajoute le checkpointer ; la compilation est faite par
-    ``compile_agent_graph`` au boot.
+    ``compile_agent_graph`` au boot. Chaque nœud est enveloppé par
+    :func:`_make_traced_node` pour persister un ``agent_run_step``.
     """
     g: StateGraph[AgentState] = StateGraph(AgentState)
 
-    g.add_node(N_ROUTE, node_route)
-    g.add_node(N_BUILD, node_build_context)
-    g.add_node(N_RECALL, node_recall_memory)
-    g.add_node(N_SELECT, node_select_tools)
-    g.add_node(N_LLM, node_call_llm)
-    g.add_node(N_VALIDATE, node_validate_payload)
-    g.add_node(N_DISPATCH, node_dispatch_tool)
-    g.add_node(N_COMPOSE, node_compose_response)
+    g.add_node(N_ROUTE, _make_traced_node(node_route, N_ROUTE))
+    g.add_node(N_BUILD, _make_traced_node(node_build_context, N_BUILD))
+    g.add_node(N_RECALL, _make_traced_node(node_recall_memory, N_RECALL))
+    g.add_node(N_SELECT, _make_traced_node(node_select_tools, N_SELECT))
+    g.add_node(N_LLM, _make_traced_node(node_call_llm, N_LLM))
+    g.add_node(N_VALIDATE, _make_traced_node(node_validate_payload, N_VALIDATE))
+    g.add_node(N_DISPATCH, _make_traced_node(node_dispatch_tool, N_DISPATCH))
+    g.add_node(N_COMPOSE, _make_traced_node(node_compose_response, N_COMPOSE))
 
     # Edges linéaires
     g.add_edge(START, N_ROUTE)

@@ -33,7 +33,6 @@ from app.agent.checkpointer import (
 from app.agent.concurrency import ThreadLockBusyError, acquire_thread_lock
 from app.agent.repository import (
     complete_run,
-    mark_run_cancelled,
     start_run,
     update_guardrails_flags,
 )
@@ -146,7 +145,8 @@ async def run_agent(
         except Exception:  # noqa: BLE001
             ctx = ContextJson(page_route="/")
 
-    # 3. Initialisation state
+    # 3. Initialisation state — agent_run_id sera renseigné après start_run
+    # pour activer le tracing par-nœud (cf. graph._make_traced_node).
     initial_state = AgentState(
         thread_id=thread_id,
         account_id=account_id,
@@ -165,6 +165,11 @@ async def run_agent(
     session: Session = SessionLocal()
     run_id: UUID | None = None
     start_ts = time.perf_counter()
+    # Flag GeneratorExit-safe : si l'``AsyncIterator`` est fermé par le
+    # client (``aclose()``), Python injecte ``GeneratorExit`` qui ne
+    # traverse aucun ``except Exception``. Le ``finally`` final assure
+    # alors la complétion en ``cancelled``.
+    run_finalized = False
 
     try:
         # Activer le contexte RLS (P2)
@@ -199,6 +204,11 @@ async def run_agent(
                         session.rollback()
                         run_id = None
 
+                # Propager run_id au state pour que le wrapping de tracing
+                # (graph._make_traced_node) écrive un row par nœud.
+                if run_id is not None:
+                    initial_state.agent_run_id = run_id
+
                 # 6. Exécuter le graph
                 # MVP F53 : on appelle ainvoke (réponse complète) puis on émet
                 # les events SSE en post-process. F55 polishera le streaming
@@ -217,6 +227,7 @@ async def run_agent(
                             error_summary="LLM_AGENT_TIMEOUT_S exceeded",
                             start_ts=start_ts,
                         )
+                        run_finalized = True
                     yield make_error_event(
                         code="timeout",
                         message="La requête a pris trop de temps. Merci de réessayer.",
@@ -263,6 +274,7 @@ async def run_agent(
                         error_summary=err_summary,
                         start_ts=start_ts,
                     )
+                    run_finalized = True
                     # F58 — Persiste les flags guardrails (FR-017).
                     _safe_update_guardrails_flags(
                         run_id=run_id,
@@ -298,12 +310,13 @@ async def run_agent(
 
     except asyncio.CancelledError:
         # Annulation client (US8)
-        if run_id is not None:
-            _safe_mark_cancelled(session, run_id=run_id)
+        if run_id is not None and not run_finalized:
+            _safe_mark_cancelled(session, run_id=run_id, start_ts=start_ts)
+            run_finalized = True
         raise
     except Exception as exc:  # noqa: BLE001
         logger.exception("run_agent failed")
-        if run_id is not None:
+        if run_id is not None and not run_finalized:
             _safe_complete(
                 session,
                 run_id=run_id,
@@ -311,12 +324,27 @@ async def run_agent(
                 error_summary=str(exc)[:500],
                 start_ts=start_ts,
             )
+            run_finalized = True
         yield make_error_event(
             code="internal",
             message="Une erreur est survenue. Merci de réessayer.",
             agent_run_id=run_id,
         ).serialize()
     finally:
+        # ``GeneratorExit``-safe : si l'``AsyncIterator`` est fermé par le
+        # client avant la fin, ni ``except CancelledError`` ni
+        # ``except Exception`` ne s'exécutent, et ``completed_at`` resterait
+        # NULL. On finalise ici avec status='cancelled' en best-effort.
+        if run_id is not None and not run_finalized:
+            try:
+                _safe_mark_cancelled(
+                    session, run_id=run_id, start_ts=start_ts
+                )
+            except Exception:  # pragma: no cover - tracing must never break
+                logger.exception(
+                    "Final mark_cancelled in finally failed for run %s",
+                    run_id,
+                )
         try:
             session.close()
         except Exception:  # noqa: BLE001
@@ -384,6 +412,42 @@ async def _emit_events(
             yield evt.serialize()
 
 
+def _aggregate_step_metrics(
+    admin_session: Session, *, run_id: UUID
+) -> tuple[int | None, int | None, str | None]:
+    """Lit ``agent_run_step`` pour calculer ``total_tokens_in/out`` et
+    ``final_node`` (le dernier nœud exécuté).
+
+    Retourne ``(total_in, total_out, final_node)``. Une absence de step
+    renvoie ``(None, None, None)``. Best-effort : toute exception est
+    avalée en debug log.
+    """
+    try:
+        agg = admin_session.execute(
+            text(
+                "SELECT "
+                " COALESCE(SUM(tokens_in), NULL) AS ti, "
+                " COALESCE(SUM(tokens_out), NULL) AS to_ "
+                "FROM agent_run_step WHERE run_id = :rid"
+            ),
+            {"rid": run_id},
+        ).mappings().fetchone()
+        last = admin_session.execute(
+            text(
+                "SELECT node_name FROM agent_run_step "
+                "WHERE run_id = :rid ORDER BY started_at DESC LIMIT 1"
+            ),
+            {"rid": run_id},
+        ).fetchone()
+        ti = int(agg["ti"]) if agg and agg["ti"] is not None else None
+        to_val = int(agg["to_"]) if agg and agg["to_"] is not None else None
+        fn = last[0] if last else None
+        return ti, to_val, fn
+    except Exception:  # noqa: BLE001 - tracing must never break run
+        logger.debug("aggregate_step_metrics failed", exc_info=True)
+        return None, None, None
+
+
 def _safe_complete(
     session: Session,
     *,
@@ -396,6 +460,8 @@ def _safe_complete(
     """UPDATE de complétion via une session ``migrator`` (BYPASSRLS).
 
     Voir :func:`_open_admin_session` pour la justification du rôle utilisé.
+    Agrège ``total_tokens_in/out`` + déduit ``final_node`` depuis les
+    ``agent_run_step`` déjà persistés par le wrapping de tracing.
     """
     total_latency_ms: int | None = None
     if start_ts is not None:
@@ -403,12 +469,18 @@ def _safe_complete(
     try:
         with _open_admin_session() as admin_session:
             admin_session.rollback()
+            ti, to_val, final_node = _aggregate_step_metrics(
+                admin_session, run_id=run_id
+            )
             complete_run(
                 admin_session,
                 run_id=run_id,
                 status=status,
                 total_latency_ms=total_latency_ms,
+                total_tokens_in=ti,
+                total_tokens_out=to_val,
                 retry_count=retry_count,
+                final_node=final_node,
                 error_summary=error_summary,
             )
             admin_session.commit()
@@ -445,15 +517,22 @@ def _safe_update_guardrails_flags(
         logger.debug("Failed to update guardrails flags %s", run_id, exc_info=True)
 
 
-def _safe_mark_cancelled(session: Session, *, run_id: UUID) -> None:
-    """Marque un run comme cancelled (US8)."""
-    try:
-        with _open_admin_session() as admin_session:
-            admin_session.rollback()
-            mark_run_cancelled(admin_session, run_id=run_id)
-            admin_session.commit()
-    except Exception:  # pragma: no cover
-        logger.exception("Failed to mark cancelled %s", run_id)
+def _safe_mark_cancelled(
+    session: Session, *, run_id: UUID, start_ts: float | None = None
+) -> None:
+    """Marque un run comme cancelled (US8 + GeneratorExit-safe path).
+
+    Délègue à :func:`_safe_complete` avec ``status='cancelled'`` pour
+    bénéficier de l'agrégation tokens / final_node depuis les steps
+    déjà persistés.
+    """
+    _safe_complete(
+        session,
+        run_id=run_id,
+        status="cancelled",
+        error_summary="client disconnected",
+        start_ts=start_ts,
+    )
 
 
 def _persist_assistant(
