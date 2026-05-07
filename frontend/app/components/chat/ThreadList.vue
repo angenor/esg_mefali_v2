@@ -6,6 +6,8 @@
  * virtualisation via vue-virtual-scroller.
  */
 import { computed } from 'vue'
+import { RecycleScroller } from 'vue-virtual-scroller'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import type { ChatThreadSummary } from '~/types/chat'
 
 interface Props {

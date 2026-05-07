@@ -22,10 +22,21 @@ export interface ChatStreamOptions {
   signal?: AbortSignal
   /** Header Authorization optionnel (JWT). Cookies session-cookie sont envoyés via credentials. */
   authHeader?: string
+  /**
+   * Idle timeout en ms : si aucun frame SSE n'arrive pendant cette durée,
+   * le stream est avorté et un frame ``error`` (code='timeout') est émis.
+   *
+   * Défaut : 45 s — légèrement supérieur au ``LLM_AGENT_TIMEOUT_S`` backend
+   * (30 s par défaut) pour laisser le backend émettre lui-même un error
+   * timeout avant que le client ne décide. Set à 0 pour désactiver
+   * (utile en tests).
+   */
+  idleTimeoutMs?: number
 }
 
 const MAX_RETRIES = 5
 const BACKOFF_MS = [1000, 2000, 4000, 8000, 8000]
+const DEFAULT_IDLE_TIMEOUT_MS = 45_000
 
 interface ParsedFrame {
   event: string
@@ -139,7 +150,9 @@ export function useChatStream(
   handlers: ChatStreamHandlers,
 ): ChatStreamController {
   const seenSeq = new Set<number>()
+  const idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS
   let attempt = 0
+  let timedOut = false
   const ownController = new AbortController()
   const externalSignal = options.signal
   if (externalSignal) {
@@ -184,10 +197,39 @@ export function useChatStream(
     handlers.onOpen?.()
     const reader = res.body.pipeThrough(new TextDecoderStream()).getReader()
     let buffer = ''
+    // Idle timeout : reset à chaque frame reçue. Si dépasse ``idleTimeoutMs``
+    // sans event, on aborte le fetch + ``reader.cancel()`` (l'abort fetch
+    // seul ne propage PAS sur le reader d'une response déjà reçue).
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+    function armIdleTimer(): void {
+      if (idleTimeoutMs <= 0) return
+      if (idleTimer !== null) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        timedOut = true
+        try { ownController.abort() } catch { /* ignore */ }
+        // ``reader.cancel()`` propage AbortError dans ``reader.read()`` en
+        // attente — sans cela, le stream resterait suspendu.
+        reader.cancel(new Error('idle_timeout')).catch(() => {})
+      }, idleTimeoutMs)
+    }
+    function disarmIdleTimer(): void {
+      if (idleTimer !== null) {
+        clearTimeout(idleTimer)
+        idleTimer = null
+      }
+    }
+    armIdleTimer()
     try {
       while (true) {
         const { value, done } = await reader.read()
-        if (done) return 'done'
+        if (done) {
+          // ``reader.cancel()`` (déclenché par le timeout) résout aussi avec
+          // ``done=true``. Il faut distinguer une fin normale d'un cancel
+          // forcé pour propager une erreur ``timeout`` à ``start()``.
+          if (timedOut) throw new Error('idle_timeout')
+          return 'done'
+        }
+        armIdleTimer()
         buffer += value
         let lastRest = buffer
         for (const { raw, rest } of extractFrames(buffer)) {
@@ -205,6 +247,7 @@ export function useChatStream(
         buffer = lastRest
       }
     } finally {
+      disarmIdleTimer()
       try { await reader.cancel() } catch { /* ignore */ }
     }
   }
@@ -219,6 +262,22 @@ export function useChatStream(
         }
         // retry path
       } catch (err) {
+        // Idle timeout : on a aborté nous-mêmes après ``idleTimeoutMs`` sans
+        // frame. On émet un error frame explicite pour que l'UI puisse
+        // afficher un message clair et ré-activer le bouton « Envoyer ».
+        if (timedOut) {
+          handlers.onFrame({
+            event: 'error',
+            data: {
+              code: 'timeout',
+              message:
+                "Pas de réponse de l'assistant après "
+                + `${Math.round(idleTimeoutMs / 1000)} s. Merci de réessayer.`,
+            },
+          })
+          handlers.onClose?.('error', err)
+          return
+        }
         if (ownController.signal.aborted) {
           handlers.onClose?.('aborted')
           return

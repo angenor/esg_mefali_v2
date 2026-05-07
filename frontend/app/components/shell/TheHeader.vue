@@ -49,7 +49,15 @@ onMounted(() => {
     </button>
 
     <div class="font-semibold text-gray-900 truncate" data-testid="header-tenant">
-      {{ displayName }}
+      <!--
+        Identique à TheAvatarMenu : ``auth.user`` n'est dispo qu'après
+        hydratation client (cookies httpOnly). On force le rendu CSR
+        uniquement pour éviter un hydration mismatch (SSR rend "" / CSR
+        rend l'email ou la raison sociale).
+      -->
+      <ClientOnly>
+        {{ displayName }}
+      </ClientOnly>
     </div>
 
     <div class="hidden md:block flex-1 min-w-0">
